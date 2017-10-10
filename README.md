@@ -7,7 +7,7 @@ Any feedback, suggestions, ideas and - ofcourse - pull requests are welcome.
 ## Scripts
 
 ### importVIEnvironmentIntoRTS
-[importVIEnvironmentIntoRTS](/royalts-scripts/blob/master/screenshots/importVIEnvironmentIntoRTS-rtsdoc-1.png) is automatically creating a Royal TS document based on vSphere environment: it's importing virtual machines, hosts and the used vCenter, including IP address, the guests operating system, description and more.
+This script is automatically creating a Royal TS document based on vSphere environment: it's importing virtual machines, hosts and the used vCenter, including IP address, the guests operating system, description and more.
 
 Execution may take some time, mainly because the reverse DNS lookup slows down the process noticeably. Optionally you may set `$useDNSReverseLookup` to `$false` to disable the lookup.
 
@@ -23,5 +23,5 @@ Execution may take some time, mainly because the reverse DNS lookup slows down t
  * Modify variables within the script file (see "*CONFIGURATION*" area)
  * Run it and wait until document is being created
 
-**Example output**
-![importVIEnvironmentIntoRTS RoyalTS Document Screenshot](/royalts-scripts/blob/master/screenshots/importVIEnvironmentIntoRTS-rtsdoc-1.png "Royal TS Document Screenshot")
+**Example output**  
+![RoyalTS Document Screenshot](https://raw.githubusercontent.com/patschi/royalts-scripts/master/screenshots/importVIEnvironmentIntoRTS-rtsdoc-1.png "Royal TS Document Screenshot")
