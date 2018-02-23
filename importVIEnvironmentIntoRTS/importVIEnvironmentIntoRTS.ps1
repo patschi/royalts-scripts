@@ -15,7 +15,7 @@
   Creation Date:  October 10, 2017
   Changelog:      1.0 First version.
   Disclaimer:     No guarantee for anything.
-                  No kittens were harmed during the development. 
+                  No kittens were harmed during the development.
 #>
 
 ##################################
@@ -41,7 +41,7 @@ $vi_password = "<SPECIFY_PASSWORD_HERE>" # put the password just right into the 
 # Setting if retrieving hostnames by doing reverse lookup of virtual machine IPs.
 # When enabled this will delay noticeable the import process.
 $useDNSReverseLookup = $true
-# Decide if you only want to add VMs with IP address set 
+# Decide if you only want to add VMs with IP address set
 $onlyAddVMWithIPAddress = $true
 
 ## OTHERS
@@ -59,11 +59,11 @@ $exportCsv_Hosts_File   = "vmw_hosts.csv"
 # Define the username saved within object which is being created
 $RoyalDocUserName       = $vi_username # "VI-Importer"
 
-##################################
-### ** THE MAGIC STARTS HERE **
-##################################
-## DO NOT TOUCH ANYTHING BELOW!
-##################################
+####################################
+### ** THE MAGIC STARTS HERE! ** ###
+####################################
+##  DO NOT TOUCH ANYTHING BELOW!  ##
+####################################
 
 # variables
 # flag if connect to vCenter or ESXi, for debugging purposes (e.g. PS ISE testing)
@@ -125,7 +125,7 @@ function CreateRoyalFolderHierarchy()
 
     $currentFolder = $Folder
     $folderStructure = $folderStructure.trim($splitter)
-    $folderStructure -split $splitter | %{
+    $folderStructure -split $splitter | ForEach-Object {
         $folder = $_
         $existingFolder = Get-RoyalObject -Folder $currentFolder -Name $folder -Type RoyalFolder
         if ($existingFolder) {
@@ -194,13 +194,13 @@ if ($connectServer) {
 
     # RETRIEVE VIRTUAL MACHINES
     Write-Output -Verbose "Retrieving VM list..."
-    $vms = Get-VM -Server $VIConnection | Sort-Object -Property Name | %{
-        $_ | Select Name, @{N="Folder"; E={GetFullPath -VM $_}}, @{N="GuestOS"; E={$_.guest.toString().Split(":")[1]}}, GuestId, @{N="DnsName"; E={$_.ExtensionData.Guest.Hostname}}, @{N="IPAddress";E={@($_.guest.IPAddress[0])}}, Notes
+    $vms = Get-VM -Server $VIConnection | Sort-Object -Property Name | ForEach-Object {
+        $_ | Select-Object Name, @{N="Folder"; E={GetFullPath -VM $_}}, @{N="GuestOS"; E={$_.guest.toString().Split(":")[1]}}, GuestId, @{N="DnsName"; E={$_.ExtensionData.Guest.Hostname}}, @{N="IPAddress";E={@($_.guest.IPAddress[0])}}, Notes
     }
 
     # RETRIEVE HOSTS
     Write-Output -Verbose "Retrieving hosts list..."
-    $hosts = Get-VMHost -Server $VIConnection | Sort-Object -Property Name | Get-View | Select Name, @{N=“IPAddress“;E={($_.Config.Network.Vnic | ? {$_.Device -eq "vmk0"}).Spec.Ip.IpAddress}}, @{N=“Type“;E={$_.Hardware.SystemInfo.Vendor + “ “ + $_.Hardware.SystemInfo.Model}}
+    $hosts = Get-VMHost -Server $VIConnection | Sort-Object -Property Name | Get-View | Select-Object Name, @{N=“IPAddress“;E={($_.Config.Network.Vnic | Where-Object {$_.Device -eq "vmk0"}).Spec.Ip.IpAddress}}, @{N=“Type“;E={$_.Hardware.SystemInfo.Vendor + “ “ + $_.Hardware.SystemInfo.Model}}
 
     # disconnecting
     Write-Output -Verbose "Disconnecting from vCenter $vi_ipaddr..."
@@ -298,7 +298,7 @@ ForEach ($server in $vms) {
 # importing hosts into royal document
 Write-Output -Verbose "+ Importing hosts..."
 $lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/Hosts/" -Folder $doc -FolderIcon "/Flat/Hardware/CPU" -InheritFromParent $true
-$hosts | %{
+$hosts | ForEach-Object {
     $hostObj = $_
 
     Write-Output -Verbose "Importing $($hostObj.Name)..."
@@ -402,7 +402,7 @@ Set-RoyalObjectValue -Object $connectionsObject -Property CustomImageName -Value
 # setting connections>datacenter icon
 # check if lastFolder is Datacenter folder-object (which means the lastFolder is directly below Connections folder)
 $vmsFolderObject = Get-RoyalObject -Folder $connectionsObject -Type RoyalFolder -Name "Virtual Machines"
-Get-RoyalObject -Folder $vmsFolderObject -Type RoyalFolder -Name "*" | %{
+Get-RoyalObject -Folder $vmsFolderObject -Type RoyalFolder -Name "*" | ForEach-Object {
     if ($_.ParentID -eq $vmsFolderObject.ID) {
         Set-RoyalObjectValue -Object $_ -Property CustomImageName -Value "/Flat/Network/Cloud" | Out-Null
     }
