@@ -10,10 +10,12 @@
 .OUTPUTS
   Basic output of current processed steps
 .NOTES
-  Version:        1.0
+  Version:        1.1
   Author:         Patrik Kernstock (pkern.at)
   Creation Date:  October 10, 2017
-  Changelog:      1.0 First version.
+  Modified Date:  February 24, 2018
+  Changelog:      For exact script changelog please check out the git commits history at:
+                  https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/importVIEnvironmentIntoRTS.ps1
   Disclaimer:     No guarantee for anything.
                   No kittens were harmed during the development.
 #>
@@ -42,7 +44,7 @@ $vi_password = "<SPECIFY_PASSWORD_HERE>" # put the password just right into the 
 # When enabled this will delay noticeable the import process.
 $useDNSReverseLookup = $true
 # Decide if you only want to add VMs with IP address set
-$onlyAddVMWithIPAddress = $true
+$onlyAddVMWithIpAddress = $true
 
 ## OTHERS
 # Path to the PowerShell module within the Royal TS installation directory (if it was installed elsewhere)
@@ -110,6 +112,8 @@ if ($vi_password -eq "<SPECIFY_PASSWORD_HERE>") {
 
 # convert password to secure string for being able to use it within PSCredential object
 $vi_password = $vi_password | ConvertTo-SecureString -asPlainText -Force
+# convert viType to lowercase, just inc ase
+$vi_type = $vi_type.ToLower()
 
 # FUNCTIONS
 # Function to recursively create folder hierarchy
@@ -159,6 +163,10 @@ function GetFullPath()
     )
 
     $folder = $vm.ExtensionData
+    # if Get-View object was specified, this is null. So we can use $vm to get the needed Get-View data.
+    if (!$folder) {
+        $folder = $vm;
+    }
     while ($folder.Parent){
         $folder = Get-View -Server $VIConnection $folder.Parent
         #Write-Host ($folder | Format-List | Out-String)
@@ -187,20 +195,28 @@ if ($connectServer) {
 
     # connect to destination
     $VIConnection = Connect-VIServer -Server $vi_ipaddr -Credential $credential -NotDefault
-    if ($VIConnection.IsConnected -eq $false) {
+    if ($VIConnection.IsConnected -ne $true) {
         Write-Error "Failed connecting to API endpoint. Aborting."
         exit
     }
 
     # RETRIEVE VIRTUAL MACHINES
     Write-Output -Verbose "Retrieving VM list..."
-    $vms = Get-VM -Server $VIConnection | Sort-Object -Property Name | ForEach-Object {
-        $_ | Select-Object Name, @{N="Folder"; E={GetFullPath -VM $_}}, @{N="GuestOS"; E={$_.guest.toString().Split(":")[1]}}, GuestId, @{N="DnsName"; E={$_.ExtensionData.Guest.Hostname}}, @{N="IPAddress";E={@($_.guest.IPAddress[0])}}, Notes
-    }
+    $vms = Get-View -Server $VIConnection -ViewType VirtualMachine -Filter @{"Config.Template"="False"; "Runtime.powerState"="poweredOn"} | Sort-Object -Property Name | Select-Object `
+        @{N="UUID"; E={$_.Summary.Config.Uuid}},`
+        @{N="Name"; E={$_.Summary.Config.Name}},`
+        @{N="Folder"; E={GetFullPath -VM $_}},`
+        @{N="GuestId"; E={$_.Summary.Config.GuestId}},`
+        @{N="GuestFamily"; E={$_.Guest.GuestFamily}},`
+        @{N="GuestFullName"; E={$_.Summary.Config.GuestFullName}},`
+        @{N="DnsName"; E={$_.Guest.Hostname}},`
+        @{N="IpAddress"; E={($_.Guest.Net.IpAddress[0])}},`
+        @{N="Notes"; E={$_.Config.Annotation}},`
+        @{N="powerState"; E={$_.Runtime.powerState}}
 
     # RETRIEVE HOSTS
     Write-Output -Verbose "Retrieving hosts list..."
-    $hosts = Get-VMHost -Server $VIConnection | Sort-Object -Property Name | Get-View | Select-Object Name, @{N=“IPAddress“;E={($_.Config.Network.Vnic | Where-Object {$_.Device -eq "vmk0"}).Spec.Ip.IpAddress}}, @{N=“Type“;E={$_.Hardware.SystemInfo.Vendor + “ “ + $_.Hardware.SystemInfo.Model}}
+    $hosts = Get-VMHost -Server $VIConnection | Sort-Object -Property Name | Get-View | Select-Object Name, @{N="IpAddress";E={($_.Config.Network.Vnic | Where-Object {$_.Device -eq "vmk0"}).Spec.Ip.IpAddress}}, @{N=“Type“;E={$_.Hardware.SystemInfo.Vendor + “ “ + $_.Hardware.SystemInfo.Model}}
 
     # disconnecting
     Write-Output -Verbose "Disconnecting from vCenter $vi_ipaddr..."
@@ -235,9 +251,15 @@ Write-Host "+ Importing virtual machines..."
 $lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/Virtual Machines/" -Folder $doc -FolderIcon "/Flat/Hardware/Computers" -InheritFromParent $true
 ForEach ($server in $vms) {
 
-    # creating connection without IPAddress does not make that much sense. So we are checking it here.
-    if ($onlyAddVMWithIPAddress) {
-        if (!$server.IPAddress) {
+    # skip servers which are not powered on, as we can not retrieve the IP address of the guest due to no running VMware tools
+    if ($server.powerState -ne "poweredOn") {
+        Write-Output -Verbose "Ignoring $($server.Name) as the machine is not powered on and therefor can not retrieve IP address..."
+        continue
+    }
+
+    # creating connection without IpAddress does not make that much sense. So we are checking it here.
+    if ($onlyAddVMWithIpAddress) {
+        if (!$server.IpAddress) {
             Write-Output -Verbose "Ignoring $($server.Name) due to empty IP address..."
             continue
         }
@@ -259,9 +281,9 @@ ForEach ($server in $vms) {
         $description = $server.Name
     }
 
-    # add guestOs if possible to description
-    if ($server.GuestOS) {
-        $description = $description + " (" + $server.GuestOS + ")"
+    # add GuestFullName if possible to description
+    if ($server.GuestFullName) {
+        $description = $description + " (" + $server.GuestFullName + ")"
     }
 
     # check if we want to use rDNS
@@ -269,14 +291,14 @@ ForEach ($server in $vms) {
         # Try to use reverse dns to get hostname of IP address
         # Check for failure of rDNS
         try {
-            $ipAddr = [System.Net.Dns]::GetHostEntry($server.IPAddress).HostName
+            $ipAddr = [System.Net.Dns]::GetHostEntry($server.IpAddress).HostName
         } catch {
             # Failure: Fallback to IP address
-            $ipAddr = $server.IPAddress
+            $ipAddr = $server.IpAddress
         }
 
     } else {
-        $ipAddr = $server.IPAddress
+        $ipAddr = $server.IpAddress
     }
 
     # create object depending on osType
@@ -311,14 +333,14 @@ $hosts | ForEach-Object {
         # Try to use reverse dns to get hostname of IP address
         # Check for failure of rDNS
         try {
-            $ipAddr = [System.Net.Dns]::GetHostEntry($hostObj.IPAddress).HostName
+            $ipAddr = [System.Net.Dns]::GetHostEntry($hostObj.IpAddress).HostName
         } catch {
             # Failure: Fallback to IP address
-            $ipAddr = $hostObj.IPAddress
+            $ipAddr = $hostObj.IpAddress
         }
 
     } else {
-        $ipAddr = $hostObj.IPAddress
+        $ipAddr = $hostObj.IpAddress
     }
 
     # create SSH connection
