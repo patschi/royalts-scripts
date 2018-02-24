@@ -4,8 +4,12 @@ This repository contains some (*currently only one*) scripts for the powerful ma
 
 Feel free to adjust the scripts to your personal or corporates needs, however it would be really awesome if you could share any improvements back with the community - thanks for any contributions! Any feedback, ideas and - of course - pull requests are strongly welcome!
 
+## ISSUES / FEEDBACK
+
+If you are having any questions, ran into any unexpected situations or when you experience any other issues, please [open an issue here on GitHub](/issues/). Thanks!
+
 ## Scripts
 
 ### importVIEnvironmentIntoRTS
 
-This script is automatically creating a Royal TS document based on a vSphere environment: It's importing virtual machines, hosts and the used vCenter, including the folder hierachy, IP addresses, the guest operating system, notes/description and more. [Checkout the script here!](/tree/master/importVIEnvironmentIntoRTS/)
+This script is automatically creating a Royal TS document based on a vSphere environment: It's importing virtual machines, hosts and the used vCenter, including the folder hierachy, IP addresses, the guest operating system, notes/description and more. [Checkout the script here!](/importVIEnvironmentIntoRTS/)

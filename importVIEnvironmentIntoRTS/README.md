@@ -2,11 +2,15 @@
 
 This script is automatically creating a Royal TS document based on vSphere environment: it's importing virtual machines, hosts and the used vCenter, including IP address, the guests operating system, description and more.
 
-Depending on the vSphere environment the script execution may take some time, also the reverse DNS lookup may slow down the process. If you would like to skip DNS Reverse Lookups you can specify parameter `-SkipDnsReverseLookup`. See more information below.
+Depending on the vSphere environment the script execution may take some time, also the reverse DNS lookup may slow down the process. If you would like to skip DNS Reverse Lookups you can specify the optional parameter `-SkipDnsReverseLookup`. [Here](#parameters) you have an overview of all available parameters.
+
+## ISSUES / FEEDBACK
+
+If you are having any questions, ran into any unexpected situations or when you experience any other issues, please [open an issue here on GitHub](/issues/). Thanks!
 
 ## REQUIREMENTS
 
-* Operating Systems: any Windows OS with PowerShell installed
+* Operating System: any Windows OS with PowerShell installed (PowerShell Core not supported)
 * PowerShell modules:
   * PowerCLI (for retrieving vSphere data, [Installation guide](https://blogs.vmware.com/PowerCLI/2017/04/powercli-install-process-powershell-gallery.html))
   * RoyalDocument (for interacting with Royal Documents, [Installation guide](https://content.royalapplications.com/Help/RoyalTS/V4/index.html?scripting_gettingstarted.htm))
@@ -14,20 +18,46 @@ Depending on the vSphere environment the script execution may take some time, al
 
 ## USAGE
 
-* Download the script
-* Execute the script with the corrected parameters.
-  * **Example**: `C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "vcenter.domain.local" -Credential (Get-Credential) -DoCsvExport`
-* Wait until the document is created
+* Download the script. [See below.](#download)
+* Execute the script with the corrected [parameters](#parameters). See [examples](#examples) below.
+* Wait until the document is created, which will look like [this](#example-output).
+
+## DOWNLOAD
+
+Some recent PowerShell versions have a cool `wget` alias to the cmldlet `Invoke-WebRequest` allowing you to easily download files. This way you can use it to quickly download the script like here:
+
+```powershell
+C:\PS> wget -OutFile importVIEnvironmentIntoRTS.ps1 https://raw.githubusercontent.com/patschi/royalts-scripts/master/importVIEnvironmentIntoRTS/importVIEnvironmentIntoRTS.ps1
+```
 
 ### PARAMETERS
 
 | Parameter                 | Type           | Description | Required | Default |
 | ------------------------- | -------------- | ----------- | -------- | ------- |
 | **-FileName**             | `String`       | The filename the document, and when enabled the CSV files, will be exported. Specify *without* file extension! | False | *vmw_servers* |
-| **-VITarget**             | `String`       |The VITarget means the hostname/IP of either a standalone ESXi or vCenter to import the data from. | True | *None* |
+| **-VITarget**             | `String`       | The VITarget means the hostname/IP of either a standalone ESXi or vCenter to import the data from. | True | *None* |
 | **-Credential**           | `PSCredential` | Specify a credential object for authentication. You can use (Get-Credential) cmdlet herefor. | True | *None* |
 | **-DoCsvExport**          | `Switch`       | If parameter provided, the data will also be exported in the CSV format. Two seperated files: `<FileName>_vms.csv` and `<FielName>_hosts.csv` will be created. | False | *False* |
 | **-SkipDnsReverseLookup** | `Switch`       | If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense. | False | *False* |
+
+### EXAMPLES
+
+Some usage examples:
+
+```powershell
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "vi_servers" -VITarget "vcenter.domain.local" -Credential (Get-Credential) -DoCsvExport
+[...processing...]
+
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "esxi_vms" -VITarget "esxi01.domain.local" -Credential (Get-Credential)
+[...processing...]
+
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "192.168.2.1" -Credential (Get-Credential) -DoCsvExport -SkipDnsReverseLookup
+[...processing...]
+
+C:\PS> $cred = Get-Credentials
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers_IPonly" -VITarget "192.168.1.1" -Credential $cred -SkipDnsReverseLookup
+[...processing...]
+```
 
 ## EXAMPLE OUTPUT
 
