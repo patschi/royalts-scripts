@@ -48,7 +48,7 @@
 ## PARAMETERS
 param(
     # VITarget (hostname/IP)
-    [Parameter(Mandatory=$true)]
+    [Parameter(Position=0, Mandatory=$true, ValueFromPipeline=$true)]
     [String[]] $VITarget,
 
     # Filename for export. Without file extension. Default: vmw_servers.
