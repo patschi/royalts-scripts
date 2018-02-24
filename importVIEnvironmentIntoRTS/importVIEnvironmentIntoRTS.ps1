@@ -10,21 +10,25 @@
   Required parameters like FileName, VITarget and Credential.
 .OUTPUTS
   Royal Document with imported data.
-.PARAMETER FileName
-  The filename the document, and when enabled the CSV files, will be exported. Specify without file extension!
 .PARAMETER VITarget
   The VITarget means the hostname/IP of either a standalone ESXi or vCenter to import the data from.
+.PARAMETER FileName
+  The filename the document, and when enabled the CSV files, will be exported. Specify without file extension!
 .PARAMETER Credential
-  Specify a credential object for authentication. You can use (Get-Credential) cmdlet herefor.
+  Specify a credential object for authentication. You can use (Get-Credential) cmdlet herefor. If not provided, PowerCLI will try using the current user.
 .PARAMETER DoCsvExport
   If parameter provided, the data will also be exported in the CSV format. Two seperated files: <FileName>_vms.csv and <FielName>_hosts.csv will be created.
 .PARAMETER SkipDnsReverseLookup
   If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense.
 .EXAMPLE
-  C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "vcenter.domain.local" -Credential (Get-Credential) -DoCsvExport
+  C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "vcenter.domain.local" -DoCsvExport
+.EXAMPLE
+  C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "vcenter01.domain.local","vcenter02.domain.local" -DoCsvExport
+.EXAMPLE
+  C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "esxi01.domain.local","vcenter03.domain.local"
 .NOTES
   Name:           importVIEnvironmentIntoRTS
-  Version:        2.0.1
+  Version:        2.1.0
   Author:         Patrik Kernstock (pkern.at)
   Copyright:      (C) 2017-2018 Patrik Kernstock
   Creation Date:  October 10, 2017
@@ -43,13 +47,13 @@
 
 ## PARAMETERS
 param(
+    # VITarget (hostname/IP)
+    [Parameter(Mandatory=$true)]
+    [String[]] $VITarget,
+
     # Filename for export. Without file extension. Default: vmw_servers.
     [Parameter(Mandatory=$false)]
     [String] $FileName = "vmw_servers",
-
-    # VITarget (hostname/IP)
-    [Parameter(Mandatory=$true)]
-    [String] $VITarget,
 
     # Credential object
     [Parameter(Mandatory=$false)]
@@ -179,7 +183,7 @@ function GetFullPath()
     if (!$folder) {
         $folder = $vm;
     }
-    while ($folder.Parent){
+    while ($folder.Parent) {
         $folder = Get-View -Server $VIConnection $folder.Parent
         #Write-Host ($folder | Format-List | Out-String)
         #if ($folder.ChildType -contains "Folder" -and $folder.ChildType -notcontains "Datacenter" -and $folder.Name -notcontains "vm") {
@@ -204,6 +208,8 @@ if ($connectServer) {
     Write-Output -Verbose "Connecting to vCenter $VITarget..."
 
     # Connect to destination
+    # Ensure we can handle multiple VI connections at once. Usually on by default...
+    Set-PowerCLIConfiguration -DefaultVIServerMode Multiple -Scope Session -Confirm:$false | Out-Null
     # check if we have any credentials provided we can use
     if ($Credential) {
         # yes, provided. so we use it.
@@ -214,20 +220,13 @@ if ($connectServer) {
     }
 
     # check if the connection worked.
-    if ($VIConnection.IsConnected -ne $true) {
-        Write-Error "Failed connecting to API endpoint. Aborting."
+    if ($VIConnection.Length -le 0) {
+        Write-Error "Could not connect to at least one endpoint of specified targets. Aborting."
         exit
     }
 
-    # Determine if it is a standalone ESXi, or vCenter.
-    if ($VIConnection.ProductLine -eq "embeddedEsx") {
-        $vi_type = "esxi"
-    } else {
-        $vi_type = "vcenter"
-    }
-
     # Get the current username. Used when creating or modifing objects within the document.
-    $RoyalDocUserName = $VIConnection.User
+    $RoyalDocUserName = $VIConnection[0].User
 
     # RETRIEVE VIRTUAL MACHINES
     Write-Output -Verbose "Retrieving VM list..."
@@ -245,7 +244,20 @@ if ($connectServer) {
 
     # RETRIEVE HOSTS
     Write-Output -Verbose "Retrieving hosts list..."
-    $hosts = Get-VMHost -Server $VIConnection | Sort-Object -Property Name | Get-View | Select-Object Name, @{N="IpAddress";E={($_.Config.Network.Vnic | Where-Object {$_.Device -eq "vmk0"}).Spec.Ip.IpAddress}}, @{N=“Type“;E={$_.Hardware.SystemInfo.Vendor + “ “ + $_.Hardware.SystemInfo.Model}}
+    $hosts = Get-View -Server $VIConnection -ViewType Hostsystem | Sort-Object -Property Name | Select-Object `
+        @{N="UUID"; E={$_.Summary.Hardware.Uuid}},`
+        @{N="Name"; E={$_.Name}},`
+        @{N="IpAddress"; E={($_.Config.Network.Vnic | Where-Object {$_.Device -eq "vmk0"}).Spec.Ip.IpAddress}},`
+        @{N="Type"; E={$_.Hardware.SystemInfo.Vendor + " " + $_.Hardware.SystemInfo.Model}}
+
+    # RETRIEVE CONNECTED TARGETS
+    Write-Output -Verbose "Retrieving connected targets list..."
+    $targets = $VIConnection | Select-Object `
+        @{N="UUID"; E={$_.InstanceUuid}},`
+        @{N="Host"; E={$_.ServiceUri.Host}},`
+        @{N="ProductLine"; E={$_.ProductLine}},`
+        @{N="Version"; E={$_.Version}},`
+        @{N="Build"; E={$_.Build}}
 
     # disconnecting
     Write-Output -Verbose "Disconnecting from vCenter $VITarget..."
@@ -299,10 +311,8 @@ ForEach ($server in $vms) {
 
     # import...
     Write-Output -Verbose "Importing $($server.Name)..."
-    # get folder, create it recursively if it does not exist, only when using vCenter
-    if ($vi_type -eq "vcenter") {
-        $lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/Virtual Machines/" + $server.Folder) -Folder $doc -InheritFromParent $true
-    }
+    # get folder, create it recursively if it does not exist
+    $lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/Virtual Machines/" + $server.Folder) -Folder $doc -InheritFromParent $true
 
     # description: either dnsName or vmName
     if ($server.DnsName) {
@@ -383,11 +393,17 @@ $hosts | ForEach-Object {
     $newConnection.Description = $hostObj.Type
     $newConnection.URI = $ipAddr
     Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+    # using CustomField for now, CustomProperties not yet supported in PS-API
+    $newConnection.CustomField1 = $hostObj.UUID
+    $newConnection.CustomField2 = $hostObj.Type
 
     # create WEB connection
     $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name ($hostObj.Name + " Web")
     $newConnection.URI = "https://" + $ipAddr + "/"
     Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+    # using CustomField for now, CustomProperties not yet supported in PS-API
+    $newConnection.CustomField1 = $hostObj.UUID
+    $newConnection.CustomField2 = $hostObj.Type
 
     # create VMware connection
     $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalVMwareConnection -Name $hostObj.Name
@@ -395,59 +411,88 @@ $hosts | ForEach-Object {
     $newConnection.URI = $ipAddr
     Set-RoyalObjectValue -Object $newConnection -Property ManagementEndpointFromParent -Value $true | Out-Null
     Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+    # using CustomField for now, CustomProperties not yet supported in PS-API
+    $newConnection.CustomField1 = $hostObj.UUID
+    $newConnection.CustomField2 = $hostObj.Type
 }
 
 # importing vCenter into document
-if ($vi_type -eq "vcenter") {
-    Write-Output -Verbose "+ Importing vCenter..."
-    $lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/vCenter/" -Folder $doc -FolderIcon "/Flat/Hardware/Storage" -InheritFromParent $true
+Write-Output -Verbose "+ Importing vCenter..."
+# create main vCenter root folder once
+$lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/vCenter/" -Folder $doc -FolderIcon "/Flat/Hardware/Storage" -InheritFromParent $true
+$imported_vcenter = 0
+$targets | ForEach-Object {
+    $target = $_
 
-    Write-Output -Verbose "Importing vCenter $VITarget..."
-
-    # create folder recursively
-    $lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/vCenter/" + $VITarget) -Folder $doc -FolderIcon "/Flat/Hardware/Screen Monitor" -InheritFromParent $true
+    # Check if target is vCenter.
+    # vpx == vCenter, embeddedEsx == ESXi.
+    if ($target.ProductLine -ne "vpx") {
+        return
+    }
 
     # check if we want to use rDNS
     if ($useDNSReverseLookup) {
         # Try to use reverse dns to get hostname of IP address
         # Check for failure of rDNS
         try {
-            $ipAddr = [System.Net.Dns]::GetHostEntry($VITarget).HostName
+            $ipAddr = [System.Net.Dns]::GetHostEntry($target.Host).HostName
         } catch {
             # Failure: Fallback to IP address
-            $ipAddr = $VITarget
+            $ipAddr = $target.Host
         }
 
     } else {
-        $ipAddr = $VITarget
+        $ipAddr = $target.Host
     }
 
+    Write-Output -Verbose "Importing vCenter $($ipAddr)..."
+
+    # create folder recursively
+    $lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/vCenter/" + $ipAddr) -Folder $doc -FolderIcon "/Flat/Hardware/Screen Monitor" -InheritFromParent $true
+
     # create SSH connection
-    $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalSSHConnection -Name "vCenter SSH"
+    $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalSSHConnection -Name "$($ipAddr) SSH"
     $newConnection.Description = "vCenter SSH"
     $newConnection.URI = $ipAddr
     Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+    # using CustomField for now, CustomProperties not yet supported in PS-API
+    $newConnection.CustomField1 = $target.UUID
+    $newConnection.CustomField2 = $target.ProductLine
 
     # create VMware connection
-    $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalVMwareConnection -Name "vCenter"
+    $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalVMwareConnection -Name "$($ipAddr)"
     $newConnection.Description = "vCenter Object"
     $newConnection.URI = $ipAddr
     Set-RoyalObjectValue -Object $newConnection -Property ManagementEndpointFromParent -Value $true | Out-Null
     Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+    # using CustomField for now, CustomProperties not yet supported in PS-API
+    $newConnection.CustomField1 = $target.UUID
+    $newConnection.CustomField2 = $target.ProductLine
 
     # create WEB connection
-    $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name "vCenter Web"
+    $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name "$($ipAddr) Web"
     $newConnection.Description = "vCenter Web"
     $newConnection.URI = "https://" + $ipAddr + "/"
     Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+    # using CustomField for now, CustomProperties not yet supported in PS-API
+    $newConnection.CustomField1 = $target.UUID
+    $newConnection.CustomField2 = $target.ProductLine
 
     # create VAMI WEB connection
-    $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name "vCenter VAMI Web"
+    $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name "$($ipAddr) VAMI Web"
     $newConnection.Description = "vCenter VAMI Web"
     $newConnection.URI = "https://" + $ipAddr + ":5480/"
     Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
-} else {
-    Write-Output "Notice: vCenter will only be created within object when VITarget was a vCenter."
+    # using CustomField for now, CustomProperties not yet supported in PS-API
+    $newConnection.CustomField1 = $target.UUID
+    $newConnection.CustomField2 = $target.ProductLine
+
+    $imported_vcenter++;
+}
+
+# did we imported any vCenters?
+if ($imported_vcenter -le 0) {
+    Write-Output -Verbose "No vCenters were imported as we were not connected to any."
 }
 
 # FINISHING
