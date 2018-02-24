@@ -24,7 +24,7 @@
   C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "vcenter.domain.local" -Credential (Get-Credential) -DoCsvExport
 .NOTES
   Name:           importVIEnvironmentIntoRTS
-  Version:        2.0.0
+  Version:        2.0.1
   Author:         Patrik Kernstock (pkern.at)
   Copyright:      (C) 2017-2018 Patrik Kernstock
   Creation Date:  October 10, 2017
