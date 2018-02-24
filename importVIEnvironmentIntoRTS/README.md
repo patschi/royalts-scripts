@@ -35,10 +35,10 @@ Depending on the vSphere environment the script execution may take some time, al
 
 ## RECOMMENDATION
 
-On new Royal TS installations by default the Internet Explorer engine will be used for newly created Web Page Connections. As the VMware vCenter Web Client nor the HTML5 Client are probably not working fine with Internet Explorer, I strongly recommend changing the default Web Page plugin to the embedded Chromium engine. Therefor please follow these steps:
+On new Royal TS installations by default the *Internet Explorer engine* will be used for created Web Page connections. As the VMware vCenter Web Client nor the HTML5 Client are probably not working fine with Internet Explorer, I strongly recommend using *embedded Chromium engine* as the default Web Page plugin. Therefor please follow these steps:
 
-1. Open the Royal TS application on your computer
-2. Click on `"File"` in the top-left side, and then on `"Plugins"` in the left menu
+1. Open the Royal TS application on your computer.
+2. Click on `"File"` in the top-left side, and then on `"Plugins"` in the left menu. ([Official plugins docs.](https://content.royalapplications.com/Help/RoyalTS/V4/index.html?introduction_plugins.htm))
 3. Once opened, switch over to the connection type `"Web Page"` in the list.
 4. Then you see the `Internet Explorer` and `Chromium-based` plugins there.
 5. Select the Chromium-based one on the right side, and click `"Set as Default"` on the right-top.
