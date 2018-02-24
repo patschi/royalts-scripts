@@ -1,27 +1,11 @@
 # royalts-scripts
 
-This repository provides several (*currently only one*) scripts for the application Royal TS, more information here: [royalapplications.com/ts/win/features](https://royalapplications.com/ts/win/features)
+This repository contains some (*currently only one*) scripts for the powerful management application Royal TS, more information about that software you may find on the official website at [royalapplications.com/ts/win/features](https://royalapplications.com/ts/win/features). These scripts are provided on a free-to-use basis, there is no official support from the Royal Applications team nor there will be any guarantee of regarding its functionality or so.
 
-Any feedback, suggestions, ideas and - ofcourse - pull requests are welcome.
+Feel free to adjust the scripts to your personal or corporates needs, however it would be really awesome if you could share any improvements back with the community - thanks for any contributions! Any feedback, ideas and - of course - pull requests are strongly welcome!
 
 ## Scripts
 
 ### importVIEnvironmentIntoRTS
-This script is automatically creating a Royal TS document based on vSphere environment: it's importing virtual machines, hosts and the used vCenter, including IP address, the guests operating system, description and more.
 
-Execution may take some time, mainly because the reverse DNS lookup slows down the process noticeably. Optionally you may set `$useDNSReverseLookup` to `$false` to disable the lookup.
-
-**Requirements**
- * Operating Systems: Windows with PowerShell installed
- * PowerShell modules:
-   * PowerCLI (for retrieving vSphere data, [Installation guide](https://blogs.vmware.com/PowerCLI/2017/04/powercli-install-process-powershell-gallery.html))
-   * RoyalDocument (for interacting with Royal Documents, [Installation guide](https://content.royalapplications.com/Help/RoyalTS/V4/index.html?scripting_gettingstarted.htm))
- * Access to VMware ESXi or VMware vCenter to retrieve the data using PowerCLI
-
-**Usage**
- * Download script
- * Modify variables within the script file (see "*CONFIGURATION*" area)
- * Run it and wait until document is being created
-
-**Example output**  
-![RoyalTS Document Screenshot](https://raw.githubusercontent.com/patschi/royalts-scripts/master/screenshots/importVIEnvironmentIntoRTS-rtsdoc-1.png "Royal TS Document Screenshot")
+This script is automatically creating a Royal TS document based on a vSphere environment: It's importing virtual machines, hosts and the used vCenter, including the folder hierachy, IP addresses, the guest operating system, notes/description and more. [Checkout the script here!](/tree/master/importVIEnvironmentIntoRTS/)
