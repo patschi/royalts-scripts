@@ -1,16 +1,29 @@
 ﻿<#
 .SYNOPSIS
-  Migrate vSphere environment to Royal Document
+  Import vSphere environment to a Royal Document
 .DESCRIPTION
   Automatically creating a Royal TS document based on vSphere
   environment: importing virtual machines, hosts and vCenters,
-  including IP address, description and more.
+  its folder structure and including IP address, description,
+  some custom fields and more.
 .INPUTS
-  None
+  Required parameters like FileName, VITarget and Credential.
 .OUTPUTS
-  Basic output of current processed steps
+  Royal Document with imported data.
+.PARAMETER FileName
+  The filename the document, and when enabled the CSV files, will be exported. Specify without file extension!
+.PARAMETER VITarget
+  The VITarget means the hostname/IP of either a standalone ESXi or vCenter to import the data from.
+.PARAMETER Credential
+  Specify a credential object for authentication. You can use (Get-Credential) cmdlet herefor.
+.PARAMETER DoCsvExport
+  If parameter provided, the data will also be exported in the CSV format. Two seperated files: <FileName>_vms.csv and <FielName>_hosts.csv.
+.PARAMETER SkipDnsReverseLookup
+  If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense.
+.EXAMPLE
+  C:\PS> .\importVIEnvironmentIntoRTS.ps1 -Filename "servers" -VITarget "vcenter.domain.local" -Credential (Get-Credential) -DoCsvExport
 .NOTES
-  Version:        1.1
+  Version:        2.0
   Author:         Patrik Kernstock (pkern.at)
   Creation Date:  October 10, 2017
   Modified Date:  February 24, 2018
@@ -18,6 +31,8 @@
                   https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/importVIEnvironmentIntoRTS.ps1
   Disclaimer:     No guarantee for anything.
                   No kittens were harmed during the development.
+.LINK
+  https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/
 #>
 
 ##################################
@@ -26,40 +41,36 @@
 ## CONFIGURATE ME!
 
 ### REQUIRED CONFIGURATION
-## EXPORT
-# Define document filename for export
-$RoyalDocFileName = "vmw_servers.rtsz"
-
 ## API: vCenter/ESXi
-# How to access the vCenter/ESXi host to query the data from
-$vi_type     = "vcenter" # "esxi" or "vcenter"
-$vi_ipaddr   = "vcenter.domain.local"
-$vi_username = "DOMAIN\vSphereAdmin"
-$vi_password = "<SPECIFY_PASSWORD_HERE>" # put the password just right into the variable
-#$vi_password = cat (".\pw.txt") # as a alternative: create a pw.txt textfile within the same path as the script containing the plaintext password
+## NEW WAY SPECIFYING SOME PARAMETERS
+param(
+    # Filename for export. Without file extension. Default: vmw_servers.
+    [Parameter(Mandatory=$false)]
+    [String] $FileName = "vmw_servers",
 
-### OPTIONAL CONFIGURATION
-## OTHER SETTINGS
-# Setting if retrieving hostnames by doing reverse lookup of virtual machine IPs.
-# When enabled this will delay noticeable the import process.
-$useDNSReverseLookup = $true
-# Decide if you only want to add VMs with IP address set
-$onlyAddVMWithIpAddress = $true
+    # VITarget (hostname/IP)
+    [Parameter(Mandatory=$true)]
+    [String] $VITarget,
+
+    # Credential object
+    [Parameter(Mandatory=$true)]
+    [System.Management.Automation.Credential()]
+    [System.Management.Automation.PSCredential]
+    $Credential,
+
+    # Set if we want to export the data as CSV files. Default: False.
+    [Parameter(Mandatory=$false)]
+    [Switch] $DoCsvExport,
+
+    # Setting if retrieving hostnames by doing reverse lookup of virtual machine IPs.
+    # When skipped this will speed up import process a bit.
+    [Parameter(Mandatory=$false)]
+    [Switch] $SkipDnsReverseLookup
+)
 
 ## OTHERS
 # Path to the PowerShell module within the Royal TS installation directory (if it was installed elsewhere)
 $RoyalPowerShellModule = "${env:ProgramFiles(x86)}\code4ward.net\Royal TS V4\RoyalDocument.PowerShell.dll"
-
-## UNIMPORTANT / OPTIONAL
-# Optional: you can export the data as CSV as well
-# Export VMs csv list
-$exportCsv_VMs_Status   = $false
-$exportCsv_VMs_File     = "vmw_servers.csv"
-# Export hosts csv list
-$exportCsv_Hosts_Status = $false
-$exportCsv_Hosts_File   = "vmw_hosts.csv"
-# Define the username saved within object which is being created
-$RoyalDocUserName       = $vi_username # "VI-Importer"
 
 ####################################
 ### ** THE MAGIC STARTS HERE! ** ###
@@ -67,7 +78,25 @@ $RoyalDocUserName       = $vi_username # "VI-Importer"
 ##  DO NOT TOUCH ANYTHING BELOW!  ##
 ####################################
 
+# Just flip the provided value of the parameter.
+$useDNSReverseLookup = !$SkipDnsReverseLookup
+# Define export document filename
+$RoyalDocFileName = $FileName + ".rtsz"
+# Define the username saved within object which is being created
+$RoyalDocUserName = $Credential.UserName # "VI-Importer"
+
+# You can export the data as CSV as well
+if ($exportCsv) {
+    # Export VMs csv list
+    $exportCsv_VMs_Status   = $true
+    $exportCsv_VMs_File     = $FileName + "_vms.csv"
+    # Export hosts csv list
+    $exportCsv_Hosts_Status = $true
+    $exportCsv_Hosts_File   = $FileName + "_hosts.csv"
+}
+
 # variables
+$vi_ipaddr = $VITarget
 # flag if connect to vCenter or ESXi, for debugging purposes (e.g. PS ISE testing)
 $connectServer = $true
 
@@ -93,27 +122,10 @@ if (!(Get-Module "RoyalDocument.PowerShell")) {
 # sanity checks
 if (Test-Path $RoyalDocFileName) {
     Write-Output "Royal Document '$RoyalDocFileName' does already exist. Aborting."
-    Write-Output "Delete the file and run this script once again."
+    Write-Output "Delete or rename the file and run this script once again."
     Write-Output "Aborting."
     exit
 }
-
-if ([string]::IsNullOrEmpty($vi_password)) {
-    Write-Output "VI-API password not specified."
-    Write-Output "Aborting."
-    exit
-}
-
-if ($vi_password -eq "<SPECIFY_PASSWORD_HERE>") {
-    Write-Output "Please change the VI-API password within the script file."
-    Write-Output "Aborting."
-    exit
-}
-
-# convert password to secure string for being able to use it within PSCredential object
-$vi_password = $vi_password | ConvertTo-SecureString -asPlainText -Force
-# convert viType to lowercase, just inc ase
-$vi_type = $vi_type.ToLower()
 
 # FUNCTIONS
 # Function to recursively create folder hierarchy
@@ -179,25 +191,29 @@ function GetFullPath()
     return $path
 }
 
-# speed things up. for debugging purposes.
+# Speed things up. for debugging purposes.
 #$useDNSReverseLookup = $false
 #$connectServer = $false
 
 # CONNECT
 Write-Output -Verbose "+ Retrieving data..."
-# connect to server
+# Connect to server
 if ($connectServer) {
 
     Write-Output -Verbose "Connecting to vCenter $vi_ipaddr..."
 
-    # load credentials object
-    $credential = New-Object System.Management.Automation.PSCredential($vi_username, $vi_password)
-
-    # connect to destination
-    $VIConnection = Connect-VIServer -Server $vi_ipaddr -Credential $credential -NotDefault
+    # Connect to destination
+    $VIConnection = Connect-VIServer -Server $vi_ipaddr -Credential $Credential -NotDefault
     if ($VIConnection.IsConnected -ne $true) {
         Write-Error "Failed connecting to API endpoint. Aborting."
         exit
+    }
+
+    # Determine if it is a standalone ESXi, or vCenter.
+    if ($VIConnection.ProductLine -eq "embeddedEsx") {
+        $vi_type = "esxi"
+    } else {
+        $vi_type = "vcenter"
     }
 
     # RETRIEVE VIRTUAL MACHINES
@@ -258,11 +274,9 @@ ForEach ($server in $vms) {
     }
 
     # creating connection without IpAddress does not make that much sense. So we are checking it here.
-    if ($onlyAddVMWithIpAddress) {
-        if (!$server.IpAddress) {
-            Write-Output -Verbose "Ignoring $($server.Name) due to empty IP address..."
-            continue
-        }
+    if (!$server.IpAddress) {
+        Write-Output -Verbose "Ignoring $($server.Name) due to empty IP address..."
+        continue
     }
 
     # import...
