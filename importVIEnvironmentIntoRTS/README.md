@@ -14,9 +14,9 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 
 ## TODO
 
-- [x] Rewrite script to use parameters instead of hardcoded values within script file
+- [x] ~~Rewrite script to use parameters instead of hardcoded values within script file~~ **Done in v2.0.0**
 - [ ] Being able to update existing documents instead of always creating new one
-- [ ] Support for multiple VMware vCenter connections, using same credentials
+- [x] ~~Support for multiple VMware vCenter connections, using same credentials~~ **Available starting v2.1.0**
 - [ ] Support for multiple VMware vCenter connections, using different credentials
 
 ## REQUIREMENTS
@@ -43,33 +43,36 @@ C:\PS> wget -OutFile importVIEnvironmentIntoRTS.ps1 https://raw.githubuserconten
 
 ### PARAMETERS
 
-| Parameter                 | Type           | Description | Required | Default |
-| ------------------------- | -------------- | ----------- | -------- | ------- |
-| **-FileName**             | `String`       | The filename the document, and when enabled the CSV files, will be exported. Specify *without* file extension! | False | *vmw_servers* |
-| **-VITarget**             | `String`       | The VITarget means the hostname/IP of either a standalone ESXi or vCenter to import the data from. | True | *None* |
-| **-Credential**           | `PSCredential` | Specify a credential object for authentication. You can use (Get-Credential) cmdlet herefor. If not provided, `Connect-VIServer` of PowerCLI will try using the current user. | False | *None* |
-| **-DoCsvExport**          | `Switch`       | If parameter provided, the data will also be exported in the CSV format. Two seperated files: `<FileName>_vms.csv` and `<FielName>_hosts.csv` will be created. | False | *False* |
-| **-SkipDnsReverseLookup** | `Switch`       | If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense. | False | *False* |
+| Parameter                 | Type          | Description | Required | Default |
+| ------------------------- | ------------- | ----------- | -------- | ------- |
+| **VITarget**             | `String|Array` | The VITarget is the hostname/IP of either a standalone ESXi or vCenter to import the data from. Starting with v2.1.0 you can also specify multiple hosts. Current limitation is that the _same credentials are going to be used for each VITarget_. | True | *None* |
+| **FileName**             | `String`       | The filename of the document. This name is also used when CSV export is enabled. Specify it the *without* file extension! | False | *vmw_servers* |
+| **Credential**           | `PSCredential` | Specify a credential object for authentication. You can use `Get-Credential` cmdlet herefor. If not provided, `Connect-VIServer` of PowerCLI will try using the current user session. | False | *None* |
+| **DoCsvExport**          | `Switch`       | If parameter provided, the data will also be exported in the CSV format. This will create two seperated files: `<FileName>_vms.csv` and `<FileName>_hosts.csv`. | False | *False* |
+| **SkipDnsReverseLookup** | `Switch`       | If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense. | False | *False* |
 
 ### EXAMPLES
 
-Some usage examples:
+Here are some usage examples:
 
 ```powershell
-C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "vi_servers" -VITarget "vcenter.domain.local"
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "vcenter.domain.local" -FileName "vi_servers"
 [...processing...]
 
-C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "vi_servers" -VITarget "vcenter.domain.local" -DoCsvExport
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "vcenter01.domain.local","vcenter02.domain.local" -FileName "vi_servers"
 [...processing...]
 
-C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "esxi_vms" -VITarget "esxi01.domain.local" -Credential (Get-Credential)
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "vcenter.domain.local" -FileName "vi_servers" -DoCsvExport
 [...processing...]
 
-C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "192.168.2.1" -Credential (Get-Credential) -DoCsvExport -SkipDnsReverseLookup
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "esxi01.domain.local","vcenter02.domain.local" -FileName "esxi_vms" -Credential (Get-Credential)
+[...processing...]
+
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "192.168.2.1" -FileName "servers" -Credential (Get-Credential) -DoCsvExport -SkipDnsReverseLookup
 [...processing...]
 
 C:\PS> $cred = Get-Credential
-C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers_IPonly" -VITarget "192.168.1.1" -Credential $cred -SkipDnsReverseLookup
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "192.168.1.1" -FileName "servers_IPonly" -Credential $cred -SkipDnsReverseLookup
 [...processing...]
 ```
 
