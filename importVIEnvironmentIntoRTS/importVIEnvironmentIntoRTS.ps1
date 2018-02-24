@@ -36,13 +36,10 @@
 #>
 
 ##################################
-### CONFIGURATION
+### SOME MAGIC CODE STARTS HERE
 ##################################
-## CONFIGURATE ME!
 
-### REQUIRED CONFIGURATION
-## API: vCenter/ESXi
-## NEW WAY SPECIFYING SOME PARAMETERS
+## PARAMETERS
 param(
     # Filename for export. Without file extension. Default: vmw_servers.
     [Parameter(Mandatory=$false)]
@@ -68,9 +65,10 @@ param(
     [Switch] $SkipDnsReverseLookup
 )
 
-## OTHERS
+### OTHERS
+## CHANGE IF REQUIRED
 # Path to the PowerShell module within the Royal TS installation directory (if it was installed elsewhere)
-$RoyalPowerShellModule = "${env:ProgramFiles(x86)}\code4ward.net\Royal TS V4\RoyalDocument.PowerShell.dll"
+$RoyalPowerShellModule = Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath 'code4ward.net\Royal TS V4\RoyalDocument.PowerShell.dll'
 
 ####################################
 ### ** THE MAGIC STARTS HERE! ** ###
@@ -79,14 +77,18 @@ $RoyalPowerShellModule = "${env:ProgramFiles(x86)}\code4ward.net\Royal TS V4\Roy
 ####################################
 
 # Just flip the provided value of the parameter.
-$useDNSReverseLookup = !$SkipDnsReverseLookup
+if ($SkipDnsReverseLookup) {
+    $useDNSReverseLookup = $false
+} else {
+    $useDNSReverseLookup = $true
+}
 # Define export document filename
 $RoyalDocFileName = $FileName + ".rtsz"
 # Define the username saved within object which is being created
 $RoyalDocUserName = $Credential.UserName # "VI-Importer"
 
 # You can export the data as CSV as well
-if ($exportCsv) {
+if ($DoCsvExport) {
     # Export VMs csv list
     $exportCsv_VMs_Status   = $true
     $exportCsv_VMs_File     = $FileName + "_vms.csv"
@@ -218,7 +220,7 @@ if ($connectServer) {
 
     # RETRIEVE VIRTUAL MACHINES
     Write-Output -Verbose "Retrieving VM list..."
-    $vms = Get-View -Server $VIConnection -ViewType VirtualMachine -Filter @{"Config.Template"="False"; "Runtime.powerState"="poweredOn"} | Sort-Object -Property Name | Select-Object `
+    $vms = Get-View -Server $VIConnection -ViewType VirtualMachine -Filter @{"Config.Template"="False"} | Sort-Object -Property Name | Select-Object `
         @{N="UUID"; E={$_.Summary.Config.Uuid}},`
         @{N="Name"; E={$_.Summary.Config.Name}},`
         @{N="Folder"; E={GetFullPath -VM $_}},`
@@ -286,8 +288,6 @@ ForEach ($server in $vms) {
         $lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/Virtual Machines/" + $server.Folder) -Folder $doc -InheritFromParent $true
     }
 
-    # create object
-    $osType = $server.GuestId
     # description: either dnsName or vmName
     if ($server.DnsName) {
         $description = $server.DnsName
@@ -316,7 +316,7 @@ ForEach ($server in $vms) {
     }
 
     # create object depending on osType
-    if ($osType -like "windows*") {
+    if ($server.GuestId -like "windows*") {
         $newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalRDSConnection -Name $server.Name
         $newConnection.Description = $description
         $newConnection.URI = $ipAddr
@@ -326,9 +326,12 @@ ForEach ($server in $vms) {
         $newConnection.Description = $description
         $newConnection.URI = $ipAddr
         $newConnection.Notes = $server.Notes
+        $newConnection.InitialSendKeySequenceToServer = $true
     }
-    Set-RoyalObjectValue -Object $newConnection -Property ManagementEndpointFromParent -Value $true | Out-Null
-    Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+    $newConnection.ManagementEndpointFromParent = $true
+    $newConnection.SecureGatewayFromParent = $true
+    $newConnection.CustomField1 = $server.UUID
+    $newConnection.CustomField2 = $server.GuestFamily
 }
 
 # importing hosts into royal document
