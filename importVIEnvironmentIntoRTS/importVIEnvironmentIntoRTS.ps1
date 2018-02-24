@@ -37,6 +37,8 @@
                   https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/importVIEnvironmentIntoRTS.ps1
   Disclaimer:     No guarantee for anything.
                   No kittens were harmed during the development.
+  Support:        For support please check out the "Support" section in the README file here:
+                  https://github.com/patschi/royalts-scripts/tree/master/importVIEnvironmentIntoRTS#support
 .LINK
   https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/
 #>
