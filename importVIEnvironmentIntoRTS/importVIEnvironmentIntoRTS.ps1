@@ -17,14 +17,16 @@
 .PARAMETER Credential
   Specify a credential object for authentication. You can use (Get-Credential) cmdlet herefor.
 .PARAMETER DoCsvExport
-  If parameter provided, the data will also be exported in the CSV format. Two seperated files: <FileName>_vms.csv and <FielName>_hosts.csv.
+  If parameter provided, the data will also be exported in the CSV format. Two seperated files: <FileName>_vms.csv and <FielName>_hosts.csv will be created.
 .PARAMETER SkipDnsReverseLookup
   If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense.
 .EXAMPLE
-  C:\PS> .\importVIEnvironmentIntoRTS.ps1 -Filename "servers" -VITarget "vcenter.domain.local" -Credential (Get-Credential) -DoCsvExport
+  C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "vcenter.domain.local" -Credential (Get-Credential) -DoCsvExport
 .NOTES
-  Version:        2.0
+  Name:           importVIEnvironmentIntoRTS
+  Version:        2.0.0
   Author:         Patrik Kernstock (pkern.at)
+  Copyright:      (C) 2017-2018 Patrik Kernstock
   Creation Date:  October 10, 2017
   Modified Date:  February 24, 2018
   Changelog:      For exact script changelog please check out the git commits history at:
@@ -35,9 +37,9 @@
   https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/
 #>
 
-##################################
-### SOME MAGIC CODE STARTS HERE
-##################################
+###################################
+### SOME MAGIC CODE STARTS HERE ###
+###################################
 
 ## PARAMETERS
 param(
@@ -132,11 +134,11 @@ if (Test-Path $RoyalDocFileName) {
 function CreateRoyalFolderHierarchy()
 {
     param(
-        [string]$folderStructure,
-        [string]$splitter = "/",
+        [string] $folderStructure,
+        [string] $splitter = "/",
         $Folder,
-        [string]$folderIcon,
-        [bool]$inheritFromParent = $false
+        [string] $folderIcon,
+        [bool] $inheritFromParent = $false
     )
 
     $currentFolder = $Folder
@@ -328,6 +330,8 @@ ForEach ($server in $vms) {
     }
     $newConnection.ManagementEndpointFromParent = $true
     $newConnection.SecureGatewayFromParent = $true
+
+    # using CustomField for now, CustomProperties not yet supported in PS-API
     $newConnection.CustomField1 = $server.UUID
     $newConnection.CustomField2 = $server.GuestFamily
 }
