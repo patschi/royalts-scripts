@@ -52,7 +52,7 @@ param(
     [String] $VITarget,
 
     # Credential object
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory=$false)]
     [System.Management.Automation.Credential()]
     [System.Management.Automation.PSCredential]
     $Credential,
@@ -86,8 +86,6 @@ if ($SkipDnsReverseLookup) {
 }
 # Define export document filename
 $RoyalDocFileName = $FileName + ".rtsz"
-# Define the username saved within object which is being created
-$RoyalDocUserName = $Credential.UserName # "VI-Importer"
 
 # You can export the data as CSV as well
 if ($DoCsvExport) {
@@ -199,13 +197,23 @@ function GetFullPath()
 
 # CONNECT
 Write-Output -Verbose "+ Retrieving data..."
+$RoyalDocUserName = $false
 # Connect to server
 if ($connectServer) {
 
     Write-Output -Verbose "Connecting to vCenter $VITarget..."
 
     # Connect to destination
-    $VIConnection = Connect-VIServer -Server $VITarget -Credential $Credential -NotDefault
+    # check if we have any credentials provided we can use
+    if ($Credential) {
+        # yes, provided. so we use it.
+        $VIConnection = Connect-VIServer -Server $VITarget -Credential $Credential -NotDefault
+    } else {
+        # nope. So we let PowerCLI trying to get the current session credentials.
+        $VIConnection = Connect-VIServer -Server $VITarget -NotDefault
+    }
+
+    # check if the connection worked.
     if ($VIConnection.IsConnected -ne $true) {
         Write-Error "Failed connecting to API endpoint. Aborting."
         exit
@@ -217,6 +225,9 @@ if ($connectServer) {
     } else {
         $vi_type = "vcenter"
     }
+
+    # Get the current username. Used when creating or modifing objects within the document.
+    $RoyalDocUserName = $VIConnection.User
 
     # RETRIEVE VIRTUAL MACHINES
     Write-Output -Verbose "Retrieving VM list..."
@@ -258,6 +269,11 @@ if ($exportCsv_VMs_Status -or $exportCsv_Hosts_Status) {
 }
 
 # CREATE DOCUMENT
+# if we do not know the username, we use any default one
+if (!$RoyalDocUserName) {
+    $RoyalDocUserName = "VI-Importer";
+}
+
 # create store (container for any documents)
 $store = New-RoyalStore -UserName $RoyalDocUserName
 # creating a temporary royal document
