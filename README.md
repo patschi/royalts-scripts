@@ -12,4 +12,4 @@ Please [open an issue on GitHub](https://github.com/patschi/royalts-scripts/issu
 
 ### importVIEnvironmentIntoRTS
 
-This script is automatically creating a Royal TS document based on a vSphere environment: It's importing virtual machines, hosts and the used vCenter, including the folder hierachy, IP addresses, the guest operating system, notes/description and more. [Checkout the script here!](/importVIEnvironmentIntoRTS/)
+This script is automatically creating a Royal TS document based on a vSphere environment: It's importing virtual machines, hosts and the used vCenter, including the folder hierarchy, IP addresses, the guest operating system, notes/description and more. [Checkout the script here!](/importVIEnvironmentIntoRTS/)

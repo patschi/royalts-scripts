@@ -1,8 +1,8 @@
 # importVIEnvironmentIntoRTS
 
-This script is automatically creating a Royal TS document based on vSphere environment: it's importing virtual machines, hosts and the used vCenter, including IP address, the guests operating system, description and more.
+This script is automatically creating a [Royal TS](https://royalapplications.com/ts/win/features) document based on your VMware vSphere environment: It is importing virtual machines, hosts and the used vCenter, including the vCenter folder hierarchy, IP address, the guest operating system, annotations and more.
 
-Depending on the vSphere environment the script execution may take some time, also the reverse DNS lookup may slow down the process. If you would like to skip DNS Reverse Lookups you can specify the optional parameter `-SkipDnsReverseLookup`. [Here](#parameters) you have an overview of all available parameters.
+Depending on the VMware vSphere environment the script execution may take some time, also the reverse DNS lookup may slow down the process a bit. If you would like to skip DNS Reverse Lookups for some reasons you can specify the optional parameter `-SkipDnsReverseLookup`. [Here](#parameters) you have an overview of all available parameters.
 
 ## SUPPORT
 
