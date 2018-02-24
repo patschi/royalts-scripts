@@ -6,7 +6,7 @@ Depending on the vSphere environment the script execution may take some time, al
 
 ## ISSUES / FEEDBACK
 
-If you are having any questions, ran into any unexpected situations or when you experience any other issues, please [open an issue here on GitHub](/issues/). Thanks!
+Please [open an issue on GitHub](https://github.com/patschi/royalts-scripts/issues) to create feature requests, ask questions or report any bugs. Thanks!
 
 ## REQUIREMENTS
 
