@@ -97,8 +97,6 @@ if ($DoCsvExport) {
     $exportCsv_Hosts_File   = $FileName + "_hosts.csv"
 }
 
-# variables
-$vi_ipaddr = $VITarget
 # flag if connect to vCenter or ESXi, for debugging purposes (e.g. PS ISE testing)
 $connectServer = $true
 
@@ -173,7 +171,7 @@ function GetFullPath()
 {
     param(
         $vm,
-        [string]$splitter = "/"
+        [string] $splitter = "/"
     )
 
     $folder = $vm.ExtensionData
@@ -202,10 +200,10 @@ Write-Output -Verbose "+ Retrieving data..."
 # Connect to server
 if ($connectServer) {
 
-    Write-Output -Verbose "Connecting to vCenter $vi_ipaddr..."
+    Write-Output -Verbose "Connecting to vCenter $VITarget..."
 
     # Connect to destination
-    $VIConnection = Connect-VIServer -Server $vi_ipaddr -Credential $Credential -NotDefault
+    $VIConnection = Connect-VIServer -Server $VITarget -Credential $Credential -NotDefault
     if ($VIConnection.IsConnected -ne $true) {
         Write-Error "Failed connecting to API endpoint. Aborting."
         exit
@@ -237,7 +235,7 @@ if ($connectServer) {
     $hosts = Get-VMHost -Server $VIConnection | Sort-Object -Property Name | Get-View | Select-Object Name, @{N="IpAddress";E={($_.Config.Network.Vnic | Where-Object {$_.Device -eq "vmk0"}).Spec.Ip.IpAddress}}, @{N=“Type“;E={$_.Hardware.SystemInfo.Vendor + “ “ + $_.Hardware.SystemInfo.Model}}
 
     # disconnecting
-    Write-Output -Verbose "Disconnecting from vCenter $vi_ipaddr..."
+    Write-Output -Verbose "Disconnecting from vCenter $VITarget..."
     Disconnect-VIServer -Server $VIConnection -Confirm:$false
 }
 
@@ -384,24 +382,24 @@ if ($vi_type -eq "vcenter") {
     Write-Output -Verbose "+ Importing vCenter..."
     $lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/vCenter/" -Folder $doc -FolderIcon "/Flat/Hardware/Storage" -InheritFromParent $true
 
-    Write-Output -Verbose "Importing vCenter $vi_ipaddr..."
+    Write-Output -Verbose "Importing vCenter $VITarget..."
 
     # create folder recursively
-    $lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/vCenter/" + $vi_ipaddr) -Folder $doc -FolderIcon "/Flat/Hardware/Screen Monitor" -InheritFromParent $true
+    $lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/vCenter/" + $VITarget) -Folder $doc -FolderIcon "/Flat/Hardware/Screen Monitor" -InheritFromParent $true
 
     # check if we want to use rDNS
     if ($useDNSReverseLookup) {
         # Try to use reverse dns to get hostname of IP address
         # Check for failure of rDNS
         try {
-            $ipAddr = [System.Net.Dns]::GetHostEntry($vi_ipaddr).HostName
+            $ipAddr = [System.Net.Dns]::GetHostEntry($VITarget).HostName
         } catch {
             # Failure: Fallback to IP address
-            $ipAddr = $vi_ipaddr
+            $ipAddr = $VITarget
         }
 
     } else {
-        $ipAddr = $vi_ipaddr
+        $ipAddr = $VITarget
     }
 
     # create SSH connection
@@ -428,12 +426,15 @@ if ($vi_type -eq "vcenter") {
     $newConnection.Description = "vCenter VAMI Web"
     $newConnection.URI = "https://" + $ipAddr + ":5480/"
     Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+} else {
+    Write-Output "Notice: vCenter will only be created within object when VITarget was a vCenter."
 }
 
 # FINISHING
 Write-Output -Verbose "+ Finishing..."
 
 # ICON STUFF
+Write-Output -Verbose "Setting icons..."
 # giving connections folder some love
 $connectionsObject = Get-RoyalObject -Folder $doc -Name "Connections" -Type RoyalFolder
 Set-RoyalObjectValue -Object $connectionsObject -Property CustomImageName -Value "/Flat/Software/Tree" | Out-Null
@@ -448,8 +449,10 @@ Get-RoyalObject -Folder $vmsFolderObject -Type RoyalFolder -Name "*" | ForEach-O
 }
 
 # WRITE DOCUMENT
-Write-Output -Verbose "Creating Royal Document $RoyalDocFileName..."
+Write-Output -Verbose "Writing Royal Document $RoyalDocFileName..."
 Out-RoyalDocument -Document $doc -FileName $RoyalDocFileName
 
 # ...and we're done.
 Write-Output -Verbose "+ Done."
+
+# FIN
