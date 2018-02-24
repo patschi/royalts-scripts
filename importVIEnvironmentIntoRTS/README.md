@@ -14,6 +14,8 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 
 ## TODO
 
+**Current version**: 2.1.0
+
 - [x] ~~Rewrite script to use parameters instead of hardcoded values within script file~~ **Done in v2.0.0**
 - [ ] Being able to update existing documents instead of always creating new one
 - [x] ~~Support for multiple VMware vCenter connections, using same credentials~~ **Available starting v2.1.0**
@@ -45,7 +47,7 @@ C:\PS> wget -OutFile importVIEnvironmentIntoRTS.ps1 https://raw.githubuserconten
 
 | Parameter                 | Type          | Description | Required | Default |
 | ------------------------- | ------------- | ----------- | -------- | ------- |
-| **VITarget**             | `String|Array` | The VITarget is the hostname/IP of either a standalone ESXi or vCenter to import the data from. Starting with v2.1.0 you can also specify multiple hosts. Current limitation is that the _same credentials are going to be used for each VITarget_. | True | *None* |
+| **VITarget**             | `String/Array` | The VITarget is the hostname/IP of either a standalone ESXi or vCenter to import the data from.<br /><br />Starting with v2.1.0 you can also specify multiple hosts. Current limitation is that the _same credentials are going to be used for each VITarget_. | True | *None* |
 | **FileName**             | `String`       | The filename of the document. This name is also used when CSV export is enabled. Specify it the *without* file extension! | False | *vmw_servers* |
 | **Credential**           | `PSCredential` | Specify a credential object for authentication. You can use `Get-Credential` cmdlet herefor. If not provided, `Connect-VIServer` of PowerCLI will try using the current user session. | False | *None* |
 | **DoCsvExport**          | `Switch`       | If parameter provided, the data will also be exported in the CSV format. This will create two seperated files: `<FileName>_vms.csv` and `<FileName>_hosts.csv`. | False | *False* |
