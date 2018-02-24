@@ -12,6 +12,13 @@ This script is provided on a free-to-use basis, there is no official support fro
 
 Feel free to adjust the scripts to your personal or corporates needs, however it would be really awesome if you could share any improvements back with the community - thanks for any contributions! Any feedback, ideas and - of course - pull requests are strongly welcome!
 
+## TODO
+
+- [x] Rewrite script to use parameters instead of hardcoded values within script file
+- [ ] Being able to update existing documents instead of always creating new one
+- [ ] Support for multiple VMware vCenter connections, using same credentials
+- [ ] Support for multiple VMware vCenter connections, using different credentials
+
 ## REQUIREMENTS
 
 * Operating System: any Windows OS with PowerShell installed (PowerShell Core not supported)
@@ -40,7 +47,7 @@ C:\PS> wget -OutFile importVIEnvironmentIntoRTS.ps1 https://raw.githubuserconten
 | ------------------------- | -------------- | ----------- | -------- | ------- |
 | **-FileName**             | `String`       | The filename the document, and when enabled the CSV files, will be exported. Specify *without* file extension! | False | *vmw_servers* |
 | **-VITarget**             | `String`       | The VITarget means the hostname/IP of either a standalone ESXi or vCenter to import the data from. | True | *None* |
-| **-Credential**           | `PSCredential` | Specify a credential object for authentication. You can use (Get-Credential) cmdlet herefor. | True | *None* |
+| **-Credential**           | `PSCredential` | Specify a credential object for authentication. You can use (Get-Credential) cmdlet herefor. If not provided, `Connect-VIServer` of PowerCLI will try using the current user. | False | *None* |
 | **-DoCsvExport**          | `Switch`       | If parameter provided, the data will also be exported in the CSV format. Two seperated files: `<FileName>_vms.csv` and `<FielName>_hosts.csv` will be created. | False | *False* |
 | **-SkipDnsReverseLookup** | `Switch`       | If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense. | False | *False* |
 
@@ -49,7 +56,10 @@ C:\PS> wget -OutFile importVIEnvironmentIntoRTS.ps1 https://raw.githubuserconten
 Some usage examples:
 
 ```powershell
-C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "vi_servers" -VITarget "vcenter.domain.local" -Credential (Get-Credential) -DoCsvExport
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "vi_servers" -VITarget "vcenter.domain.local"
+[...processing...]
+
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "vi_servers" -VITarget "vcenter.domain.local" -DoCsvExport
 [...processing...]
 
 C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "esxi_vms" -VITarget "esxi01.domain.local" -Credential (Get-Credential)
@@ -58,7 +68,7 @@ C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "esxi_vms" -VITarget "esxi01.d
 C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "192.168.2.1" -Credential (Get-Credential) -DoCsvExport -SkipDnsReverseLookup
 [...processing...]
 
-C:\PS> $cred = Get-Credentials
+C:\PS> $cred = Get-Credential
 C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers_IPonly" -VITarget "192.168.1.1" -Credential $cred -SkipDnsReverseLookup
 [...processing...]
 ```
