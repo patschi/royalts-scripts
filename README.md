@@ -4,11 +4,11 @@ This repository contains some (*currently only one*) scripts for the powerful ma
 
 Feel free to adjust the scripts to your personal or corporates needs, however it would be really awesome if you could share any improvements back with the community - thanks for any contributions! Any feedback, ideas and - of course - pull requests are strongly welcome!
 
-## ISSUES / FEEDBACK
+## SUPPORT
 
 Please [open an issue on GitHub](https://github.com/patschi/royalts-scripts/issues) to create feature requests, ask questions or report any bugs. Thanks!
 
-## Scripts
+## SCRIPTS
 
 ### importVIEnvironmentIntoRTS
 

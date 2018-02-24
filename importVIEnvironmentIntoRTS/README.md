@@ -26,7 +26,7 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 * Execute the script with the corrected [parameters](#parameters). See [examples](#examples) below.
 * Wait until the document is created, which will look like [this](#example-output).
 
-## DOWNLOAD
+### DOWNLOAD
 
 Some recent PowerShell versions have a cool `wget` alias to the cmldlet `Invoke-WebRequest` allowing you to easily download files. This way you can use it to quickly download the script like here:
 
