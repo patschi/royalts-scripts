@@ -14,13 +14,13 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 
 ## TODO
 
-**Current version**: 2.1.0
+**Current version**: 2.2.0
 
 - [x] ~~Rewrite script to use parameters instead of hardcoded values within script file~~ **Done in v2.0.0**
 - [ ] Being able to update existing documents instead of always creating new one
 - [x] ~~Support for multiple VMware vCenter connections, using same credentials~~ **Available starting v2.1.0**
 - [ ] Support for multiple VMware vCenter connections, using different credentials
-- [ ] Being able to exclude specific object types, e.g. VMs, Hosts and vCenter.
+- [x] ~~Being able to exclude specific object types, e.g. VMs, Hosts and vCenter.~~ **Available starting v2.2.0**
 - [ ] Add an option to be able automatically setting `Use Credentials from the parent folder` on each object
 
 ## REQUIREMENTS
@@ -47,13 +47,16 @@ C:\PS> wget -OutFile importVIEnvironmentIntoRTS.ps1 https://raw.githubuserconten
 
 ### PARAMETERS
 
-| Parameter                 | Type           | Description | Required   | Default |
-| ------------------------- | -------------- | ----------- | :--------: | ------- |
-| **VITarget**              | `String/Array` | The VITarget is the hostname/IP of either a standalone ESXi or vCenter to import the data from.<br/><br/>Starting with v2.1.0 you can also specify multiple hosts. Current limitation is that the _same credentials are going to be used for each VITarget_. | True | *None* |
-| **FileName**              | `String`       | The filename of the document. This name is also used when CSV export is enabled. Specify it the *without* file extension! | False | *vmw_servers* |
-| **Credential**            | `PSCredential` | Specify a credential object for authentication. You can use `Get-Credential` cmdlet herefor. If not provided, `Connect-VIServer` of PowerCLI will try using the current user session. | False | *None* |
-| **DoCsvExport**           | `Switch`       | If parameter provided, the data will also be exported in the CSV format. This will create two seperated files: `<FileName>_vms.csv` and `<FileName>_hosts.csv`. | False | *False* |
-| **SkipDnsReverseLookup**  | `Switch`       | If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense. | False | *False* |
+| Parameter                 | Type           | Description | Required Version | Required   | Default   |
+| ------------------------- | -------------- | ----------- | :--------------: | :--------: | :-------: |
+| **VITarget**              | `String/Array` | The VITarget is the hostname/IP of either a standalone ESXi or vCenter to import the data from.<br/><br/>Starting with v2.1.0 you can also specify multiple hosts. Current limitation is that the _same credentials are going to be used for all VITargets_. | 2.0.0 | True | *None* |
+| **FileName**              | `String`       | The filename of the document. This name is also used when CSV export is enabled. Specify *without* file extension! | 2.0.0 | False | *vmw_servers* |
+| **Credential**            | `PSCredential` | Specify a credential object for authentication. You can use `Get-Credential` cmdlet herefor. If not provided, `Connect-VIServer` of PowerCLI will try using the current user session. | 2.0.0 | False | *None* |
+| **DoCsvExport**           | `Switch`       | If parameter provided, the data will also be exported in the CSV format. This will create two seperated files: `<FileName>_vms.csv` and `<FileName>_hosts.csv`. | 2.0.0 | False | *False* |
+| **SkipDnsReverseLookup**  | `Switch`       | If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense. | 2.0.0 | False | *False* |
+| **ExcludeVCenters**       | `Switch`       | If parameter provided, all vCenters will be excluded and not imported in the Royal document.| 2.2.0 | False | *False* |
+| **ExcludeHosts**          | `Switch`       | If parameter provided, all hosts will be excluded and not imported in the Royal document.| 2.2.0 | False | *False* |
+| **ExcludeVMs**            | `Switch`       | If parameter provided, all virtual machines will be excluded and not imported in the Royal document.| 2.2.0 | False | *False* |
 
 ### EXAMPLES
 
@@ -77,6 +80,12 @@ C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "192.168.2.1" -FileName "serve
 
 C:\PS> $cred = Get-Credential
 C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "192.168.1.1" -FileName "servers_IPonly" -Credential $cred -SkipDnsReverseLookup
+[...processing...]
+
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "vcenter.domain.local" -ExcludeVCenters -ExcludeHosts
+[...processing...]
+
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "vcenter.domain.local" -ExcludeVMs -SkipDnsReverseLookup
 [...processing...]
 ```
 
