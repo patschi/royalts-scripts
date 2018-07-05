@@ -2,12 +2,11 @@
 .SYNOPSIS
   Import vSphere environment to a Royal Document
 .DESCRIPTION
-  Automatically creating a Royal TS document based on vSphere
-  environment: importing virtual machines, hosts and vCenters,
-  its folder structure and including IP address, description,
-  some custom fields and more.
+  Automatically creating a Royal TS document based on vSphere environment:
+  importing virtual machines, hosts and vCenters, its folder structure and
+  including IP address, description, some custom fields and more.
 .INPUTS
-  Required parameters like FileName, VITarget and Credential.
+  Required parameters like FileName, VITarget and Credential. Take a look in the docs.
 .OUTPUTS
   Royal Document with imported data.
 .PARAMETER VITarget
@@ -20,19 +19,29 @@
   If parameter provided, the data will also be exported in the CSV format. Two seperated files: <FileName>_vms.csv and <FielName>_hosts.csv will be created.
 .PARAMETER SkipDnsReverseLookup
   If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense.
+.PARAMETER ExcludeVCenters
+  If parameter provided, all vCenters will be excluded and not imported in the Royal document. By default everything will be imported.
+.PARAMETER ExcludeHosts
+  If parameter provided, all hosts will be excluded and not imported in the Royal document. By default everything will be imported.
+.PARAMETER ExcludeVMs
+  If parameter provided, all virtual machines will be excluded and not imported in the Royal document. By default everything will be imported.
 .EXAMPLE
   C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "vcenter.domain.local" -DoCsvExport
 .EXAMPLE
   C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "vcenter01.domain.local","vcenter02.domain.local" -DoCsvExport
 .EXAMPLE
   C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "esxi01.domain.local","vcenter03.domain.local"
+.EXAMPLE
+  C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "esxi01.domain.local" -ExcludeHosts -ExcludeVCenters
+.EXAMPLE
+  C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "esxi01.domain.local" -ExcludeVMs
 .NOTES
   Name:           importVIEnvironmentIntoRTS
-  Version:        2.1.0
+  Version:        2.2.0
   Author:         Patrik Kernstock (pkern.at)
   Copyright:      (C) 2017-2018 Patrik Kernstock
   Creation Date:  October 10, 2017
-  Modified Date:  February 24, 2018
+  Modified Date:  July 6, 2018
   Changelog:      For exact script changelog please check out the git commits history at:
 				  https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/importVIEnvironmentIntoRTS.ps1
   Disclaimer:     No guarantee for anything.
@@ -70,7 +79,19 @@ param(
 	# Setting if retrieving hostnames by doing reverse lookup of virtual machine IPs.
 	# When skipped this will speed up import process a bit.
 	[Parameter(Mandatory=$false)]
-	[Switch] $SkipDnsReverseLookup
+	[Switch] $SkipDnsReverseLookup,
+
+	# Decide if we ignore vCenters
+	[Parameter(Mandatory=$false)]
+	[Switch] $ExcludeVCenters,
+
+	# Decide if we ignore Hosts
+	[Parameter(Mandatory=$false)]
+	[Switch] $ExcludeHosts,
+
+	# Decide if we ignore VMs
+	[Parameter(Mandatory=$false)]
+	[Switch] $ExcludeVMs
 )
 
 ### OTHERS
@@ -85,11 +106,7 @@ $RoyalPowerShellModule = Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath 'co
 ####################################
 
 # Just flip the provided value of the parameter.
-if ($SkipDnsReverseLookup) {
-	$useDNSReverseLookup = $false
-} else {
-	$useDNSReverseLookup = $true
-}
+$SkipDnsReverseLookup = !$useDNSReverseLookup
 # Define export document filename
 $RoyalDocFileName = $FileName + ".rtsz"
 
@@ -231,35 +248,41 @@ if ($connectServer) {
 	$RoyalDocUserName = $VIConnection[0].User
 
 	# RETRIEVE VIRTUAL MACHINES
-	Write-Output -Verbose "Retrieving VM list..."
-	$vms = Get-View -Server $VIConnection -ViewType VirtualMachine -Filter @{"Config.Template"="False"} | Sort-Object -Property Name | Select-Object `
-		@{N="UUID"; E={$_.Summary.Config.Uuid}},`
-		@{N="Name"; E={$_.Summary.Config.Name}},`
-		@{N="Folder"; E={GetFullPath -VM $_}},`
-		@{N="GuestId"; E={$_.Summary.Config.GuestId}},`
-		@{N="GuestFamily"; E={$_.Guest.GuestFamily}},`
-		@{N="GuestFullName"; E={$_.Summary.Config.GuestFullName}},`
-		@{N="DnsName"; E={$_.Guest.Hostname}},`
-		@{N="IpAddress"; E={($_.Guest.Net.IpAddress[0])}},`
-		@{N="Notes"; E={$_.Config.Annotation}},`
-		@{N="powerState"; E={$_.Runtime.powerState}}
+	if (!$ExcludeVMs) {
+		Write-Output -Verbose "Retrieving VM list..."
+		$vms = Get-View -Server $VIConnection -ViewType VirtualMachine -Filter @{"Config.Template"="False"} | Sort-Object -Property Name | Select-Object `
+			@{N="UUID"; E={$_.Summary.Config.Uuid}},`
+			@{N="Name"; E={$_.Summary.Config.Name}},`
+			@{N="Folder"; E={GetFullPath -VM $_}},`
+			@{N="GuestId"; E={$_.Summary.Config.GuestId}},`
+			@{N="GuestFamily"; E={$_.Guest.GuestFamily}},`
+			@{N="GuestFullName"; E={$_.Summary.Config.GuestFullName}},`
+			@{N="DnsName"; E={$_.Guest.Hostname}},`
+			@{N="IpAddress"; E={($_.Guest.Net.IpAddress[0])}},`
+			@{N="Notes"; E={$_.Config.Annotation}},`
+			@{N="powerState"; E={$_.Runtime.powerState}}
+	}
 
 	# RETRIEVE HOSTS
-	Write-Output -Verbose "Retrieving hosts list..."
-	$hosts = Get-View -Server $VIConnection -ViewType Hostsystem | Sort-Object -Property Name | Select-Object `
-		@{N="UUID"; E={$_.Summary.Hardware.Uuid}},`
-		@{N="Name"; E={$_.Name}},`
-		@{N="IpAddress"; E={($_.Config.Network.Vnic | Where-Object {$_.Device -eq "vmk0"}).Spec.Ip.IpAddress}},`
-		@{N="Type"; E={$_.Hardware.SystemInfo.Vendor + " " + $_.Hardware.SystemInfo.Model}}
+	if (!$ExcludeHosts) {
+		Write-Output -Verbose "Retrieving hosts list..."
+		$hosts = Get-View -Server $VIConnection -ViewType Hostsystem | Sort-Object -Property Name | Select-Object `
+			@{N="UUID"; E={$_.Summary.Hardware.Uuid}},`
+			@{N="Name"; E={$_.Name}},`
+			@{N="IpAddress"; E={($_.Config.Network.Vnic | Where-Object {$_.Device -eq "vmk0"}).Spec.Ip.IpAddress}},`
+			@{N="Type"; E={$_.Hardware.SystemInfo.Vendor + " " + $_.Hardware.SystemInfo.Model}}
+	}
 
-	# RETRIEVE CONNECTED TARGETS
-	Write-Output -Verbose "Retrieving connected targets list..."
-	$targets = $VIConnection | Select-Object `
-		@{N="UUID"; E={$_.InstanceUuid}},`
-		@{N="Host"; E={$_.ServiceUri.Host}},`
-		@{N="ProductLine"; E={$_.ProductLine}},`
-		@{N="Version"; E={$_.Version}},`
-		@{N="Build"; E={$_.Build}}
+	# RETRIEVE CONNECTED VITARGETS
+	if (!$ExcludeVCenters) {
+		Write-Output -Verbose "Retrieving connected VI targets list..."
+		$targets = $VIConnection | Select-Object `
+			@{N="UUID"; E={$_.InstanceUuid}},`
+			@{N="Host"; E={$_.ServiceUri.Host}},`
+			@{N="ProductLine"; E={$_.ProductLine}},`
+			@{N="Version"; E={$_.Version}},`
+			@{N="Build"; E={$_.Build}}
+	}
 
 	# disconnecting
 	Write-Output -Verbose "Disconnecting from vCenter $VITarget..."
@@ -270,13 +293,13 @@ if ($connectServer) {
 if ($exportCsv_VMs_Status -or $exportCsv_Hosts_Status) {
 	Write-Host "+ Exporting CSV..."
 	# export VMs as csv
-	if ($exportCsv_VMs_Status) {
+	if ($exportCsv_VMs_Status -and $vms.Length -eq 0) {
 		Write-Output -Verbose "Exporting CSV VMs file..."
 		$vms | Export-CSV -Path $exportCsv_VMs_File -NoTypeInformation
 	}
 
 	# export VMs as csv
-	if ($exportCsv_Hosts_Status) {
+	if ($exportCsv_Hosts_Status -and $hosts.Length -eq 0) {
 		Write-Output -Verbose "Exporting CSV hosts file..."
 		$hosts | Export-CSV -Path $exportCsv_Hosts_File -NoTypeInformation
 	}
@@ -293,203 +316,220 @@ $store = New-RoyalStore -UserName $RoyalDocUserName
 # creating a temporary royal document
 $doc = New-RoyalDocument -Store $store -Name "VMware Virtual Machines Import" -FileName $RoyalDocFileName
 
+Write-Host "+ Importing..."
 # DOCUMENT IMPORT
 # importing servers into royal document
-Write-Host "+ Importing virtual machines..."
-$lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/Virtual Machines/" -Folder $doc -FolderIcon "/Flat/Hardware/Computers" -InheritFromParent $true
-ForEach ($server in $vms) {
+if ($vms.Length -gt 0) {
+	Write-Output -Verbose "- Importing vms..."
+	$lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/Virtual Machines/" -Folder $doc -FolderIcon "/Flat/Hardware/Computers" -InheritFromParent $true
+	ForEach ($server in $vms) {
 
-	# skip servers which are not powered on, as we can not retrieve the IP address of the guest due to no running VMware tools
-	if ($server.powerState -ne "poweredOn") {
-		Write-Output -Verbose "Ignoring $($server.Name) as the machine is not powered on and therefor can not retrieve IP address..."
-		continue
-	}
+		# skip servers which are not powered on, as we can not retrieve the IP address of the guest due to no running VMware tools
+		if ($server.powerState -ne "poweredOn") {
+			Write-Output -Verbose "Ignoring $($server.Name) as the machine is not powered on and therefor can not retrieve IP address..."
+			continue
+		}
 
-	# creating connection without IpAddress does not make that much sense. So we are checking it here.
-	if (!$server.IpAddress) {
-		Write-Output -Verbose "Ignoring $($server.Name) due to empty IP address..."
-		continue
-	}
+		# creating connection without IpAddress does not make that much sense. So we are checking it here.
+		if (!$server.IpAddress) {
+			Write-Output -Verbose "Ignoring $($server.Name) due to empty IP address..."
+			continue
+		}
 
-	# import...
-	Write-Output -Verbose "Importing $($server.Name)..."
-	# get folder, create it recursively if it does not exist
-	$lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/Virtual Machines/" + $server.Folder) -Folder $doc -InheritFromParent $true
+		# import...
+		Write-Output -Verbose "Importing $($server.Name)..."
+		# get folder, create it recursively if it does not exist
+		$lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/Virtual Machines/" + $server.Folder) -Folder $doc -InheritFromParent $true
 
-	# description: either dnsName or vmName
-	if ($server.DnsName) {
-		$description = $server.DnsName
-	} else {
-		$description = $server.Name
-	}
+		# description: either dnsName or vmName
+		if ($server.DnsName) {
+			$description = $server.DnsName
+		} else {
+			$description = $server.Name
+		}
 
-	# add GuestFullName if possible to description
-	if ($server.GuestFullName) {
-		$description = $description + " (" + $server.GuestFullName + ")"
-	}
+		# add GuestFullName if possible to description
+		if ($server.GuestFullName) {
+			$description = $description + " (" + $server.GuestFullName + ")"
+		}
 
-	# check if we want to use rDNS
-	if ($useDNSReverseLookup) {
-		# Try to use reverse dns to get hostname of IP address
-		# Check for failure of rDNS
-		try {
-			$ipAddr = [System.Net.Dns]::GetHostEntry($server.IpAddress).HostName
-		} catch {
-			# Failure: Fallback to IP address
+		# check if we want to use rDNS
+		if ($useDNSReverseLookup) {
+			# Try to use reverse dns to get hostname of IP address
+			# Check for failure of rDNS
+			try {
+				$ipAddr = [System.Net.Dns]::GetHostEntry($server.IpAddress).HostName
+			} catch {
+				# Failure: Fallback to IP address
+				$ipAddr = $server.IpAddress
+			}
+
+		} else {
 			$ipAddr = $server.IpAddress
 		}
 
-	} else {
-		$ipAddr = $server.IpAddress
+		# create object depending on osType
+		if ($server.GuestId -like "windows*") {
+			$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalRDSConnection -Name $server.Name
+			$newConnection.Description = $description
+			$newConnection.URI = $ipAddr
+			$newConnection.Notes = $server.Notes
+		} else {
+			$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalSSHConnection -Name $server.Name
+			$newConnection.Description = $description
+			$newConnection.URI = $ipAddr
+			$newConnection.Notes = $server.Notes
+			$newConnection.InitialSendKeySequenceToServer = $true
+		}
+		$newConnection.ManagementEndpointFromParent = $true
+		$newConnection.SecureGatewayFromParent = $true
+
+		# using CustomField for now, CustomProperties not yet supported in PS-API
+		$newConnection.CustomField1 = $server.UUID
+		$newConnection.CustomField2 = $server.GuestFamily
 	}
 
-	# create object depending on osType
-	if ($server.GuestId -like "windows*") {
-		$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalRDSConnection -Name $server.Name
-		$newConnection.Description = $description
-		$newConnection.URI = $ipAddr
-		$newConnection.Notes = $server.Notes
-	} else {
-		$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalSSHConnection -Name $server.Name
-		$newConnection.Description = $description
-		$newConnection.URI = $ipAddr
-		$newConnection.Notes = $server.Notes
-		$newConnection.InitialSendKeySequenceToServer = $true
-	}
-	$newConnection.ManagementEndpointFromParent = $true
-	$newConnection.SecureGatewayFromParent = $true
-
-	# using CustomField for now, CustomProperties not yet supported in PS-API
-	$newConnection.CustomField1 = $server.UUID
-	$newConnection.CustomField2 = $server.GuestFamily
+} else {
+	Write-Host "- Importing vms... Skipped."
 }
 
 # importing hosts into royal document
-Write-Output -Verbose "+ Importing hosts..."
-$lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/Hosts/" -Folder $doc -FolderIcon "/Flat/Hardware/CPU" -InheritFromParent $true
-$hosts | ForEach-Object {
-	$hostObj = $_
+if ($hosts.Length -gt 0) {
+	Write-Output -Verbose "- Importing hosts..."
+	$lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/Hosts/" -Folder $doc -FolderIcon "/Flat/Hardware/CPU" -InheritFromParent $true
+	$hosts | ForEach-Object {
+		$hostObj = $_
 
-	Write-Output -Verbose "Importing $($hostObj.Name)..."
+		Write-Output -Verbose "Importing $($hostObj.Name)..."
 
-	# create folder recursively
-	$lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/Hosts/" + $hostObj.Name) -Folder $doc -FolderIcon "/Flat/Hardware/Server" -InheritFromParent $true
+		# create folder recursively
+		$lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/Hosts/" + $hostObj.Name) -Folder $doc -FolderIcon "/Flat/Hardware/Server" -InheritFromParent $true
 
-	# check if we want to use rDNS
-	if ($useDNSReverseLookup) {
-		# Try to use reverse dns to get hostname of IP address
-		# Check for failure of rDNS
-		try {
-			$ipAddr = [System.Net.Dns]::GetHostEntry($hostObj.IpAddress).HostName
-		} catch {
-			# Failure: Fallback to IP address
+		# check if we want to use rDNS
+		if ($useDNSReverseLookup) {
+			# Try to use reverse dns to get hostname of IP address
+			# Check for failure of rDNS
+			try {
+				$ipAddr = [System.Net.Dns]::GetHostEntry($hostObj.IpAddress).HostName
+			} catch {
+				# Failure: Fallback to IP address
+				$ipAddr = $hostObj.IpAddress
+			}
+
+		} else {
 			$ipAddr = $hostObj.IpAddress
 		}
 
-	} else {
-		$ipAddr = $hostObj.IpAddress
+		# create SSH connection
+		$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalSSHConnection -Name ($hostObj.Name + " SSH")
+		$newConnection.Description = $hostObj.Type
+		$newConnection.URI = $ipAddr
+		Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+		# using CustomField for now, CustomProperties not yet supported in PS-API
+		$newConnection.CustomField1 = $hostObj.UUID
+		$newConnection.CustomField2 = $hostObj.Type
+
+		# create WEB connection
+		$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name ($hostObj.Name + " Web")
+		$newConnection.URI = "https://" + $ipAddr + "/"
+		Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+		# using CustomField for now, CustomProperties not yet supported in PS-API
+		$newConnection.CustomField1 = $hostObj.UUID
+		$newConnection.CustomField2 = $hostObj.Type
+
+		# create VMware connection
+		$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalVMwareConnection -Name $hostObj.Name
+		$newConnection.Description = $hostObj.Type
+		$newConnection.URI = $ipAddr
+		Set-RoyalObjectValue -Object $newConnection -Property ManagementEndpointFromParent -Value $true | Out-Null
+		Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+		# using CustomField for now, CustomProperties not yet supported in PS-API
+		$newConnection.CustomField1 = $hostObj.UUID
+		$newConnection.CustomField2 = $hostObj.Type
 	}
 
-	# create SSH connection
-	$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalSSHConnection -Name ($hostObj.Name + " SSH")
-	$newConnection.Description = $hostObj.Type
-	$newConnection.URI = $ipAddr
-	Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
-	# using CustomField for now, CustomProperties not yet supported in PS-API
-	$newConnection.CustomField1 = $hostObj.UUID
-	$newConnection.CustomField2 = $hostObj.Type
-
-	# create WEB connection
-	$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name ($hostObj.Name + " Web")
-	$newConnection.URI = "https://" + $ipAddr + "/"
-	Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
-	# using CustomField for now, CustomProperties not yet supported in PS-API
-	$newConnection.CustomField1 = $hostObj.UUID
-	$newConnection.CustomField2 = $hostObj.Type
-
-	# create VMware connection
-	$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalVMwareConnection -Name $hostObj.Name
-	$newConnection.Description = $hostObj.Type
-	$newConnection.URI = $ipAddr
-	Set-RoyalObjectValue -Object $newConnection -Property ManagementEndpointFromParent -Value $true | Out-Null
-	Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
-	# using CustomField for now, CustomProperties not yet supported in PS-API
-	$newConnection.CustomField1 = $hostObj.UUID
-	$newConnection.CustomField2 = $hostObj.Type
+} else {
+	Write-Host "- Importing hosts... Skipped."
 }
 
 # importing vCenter into document
-Write-Output -Verbose "+ Importing vCenter..."
-# create main vCenter root folder once
-$lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/vCenter/" -Folder $doc -FolderIcon "/Flat/Hardware/Storage" -InheritFromParent $true
-$imported_vcenter = 0
-$targets | ForEach-Object {
-	$target = $_
+if (@($targets).Count -gt 0) {
+	Write-Output -Verbose "- Importing vCenter..."
+	# create main vCenter root folder once
+	$lastFolder = CreateRoyalFolderHierarchy -FolderStructure "Connections/vCenter/" -Folder $doc -FolderIcon "/Flat/Hardware/Storage" -InheritFromParent $true
+	$imported_vcenter = 0
 
-	# Check if target is vCenter.
-	# vpx == vCenter, embeddedEsx == ESXi.
-	if ($target.ProductLine -ne "vpx") {
-		return
-	}
+	$targets | ForEach-Object {
+		$target = $_
 
-	# check if we want to use rDNS
-	if ($useDNSReverseLookup) {
-		# Try to use reverse dns to get hostname of IP address
-		# Check for failure of rDNS
-		try {
-			$ipAddr = [System.Net.Dns]::GetHostEntry($target.Host).HostName
-		} catch {
-			# Failure: Fallback to IP address
+		# Check if target is vCenter.
+		# vpx == vCenter, embeddedEsx == ESXi.
+		if ($target.ProductLine -ne "vpx") {
+			return
+		}
+
+		# check if we want to use rDNS
+		if ($useDNSReverseLookup) {
+			# Try to use reverse dns to get hostname of IP address
+			# Check for failure of rDNS
+			try {
+				$ipAddr = [System.Net.Dns]::GetHostEntry($target.Host).HostName
+			} catch {
+				# Failure: Fallback to IP address
+				$ipAddr = $target.Host
+			}
+
+		} else {
 			$ipAddr = $target.Host
 		}
 
-	} else {
-		$ipAddr = $target.Host
+		Write-Output -Verbose "Importing vCenter $($ipAddr)..."
+
+		# create folder recursively
+		$lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/vCenter/" + $ipAddr) -Folder $doc -FolderIcon "/Flat/Hardware/Screen Monitor" -InheritFromParent $true
+
+		# create SSH connection
+		$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalSSHConnection -Name "$($ipAddr) SSH"
+		$newConnection.Description = "vCenter SSH"
+		$newConnection.URI = $ipAddr
+		Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+		# using CustomField for now, CustomProperties not yet supported in PS-API
+		$newConnection.CustomField1 = $target.UUID
+		$newConnection.CustomField2 = $target.ProductLine
+
+		# create VMware connection
+		$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalVMwareConnection -Name "$($ipAddr)"
+		$newConnection.Description = "vCenter Object"
+		$newConnection.URI = $ipAddr
+		Set-RoyalObjectValue -Object $newConnection -Property ManagementEndpointFromParent -Value $true | Out-Null
+		Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+		# using CustomField for now, CustomProperties not yet supported in PS-API
+		$newConnection.CustomField1 = $target.UUID
+		$newConnection.CustomField2 = $target.ProductLine
+
+		# create WEB connection
+		$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name "$($ipAddr) Web"
+		$newConnection.Description = "vCenter Web"
+		$newConnection.URI = "https://" + $ipAddr + "/"
+		Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+		# using CustomField for now, CustomProperties not yet supported in PS-API
+		$newConnection.CustomField1 = $target.UUID
+		$newConnection.CustomField2 = $target.ProductLine
+
+		# create VAMI WEB connection
+		$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name "$($ipAddr) VAMI Web"
+		$newConnection.Description = "vCenter VAMI Web"
+		$newConnection.URI = "https://" + $ipAddr + ":5480/"
+		Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
+		# using CustomField for now, CustomProperties not yet supported in PS-API
+		$newConnection.CustomField1 = $target.UUID
+		$newConnection.CustomField2 = $target.ProductLine
+
+		$imported_vcenter++;
 	}
 
-	Write-Output -Verbose "Importing vCenter $($ipAddr)..."
-
-	# create folder recursively
-	$lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/vCenter/" + $ipAddr) -Folder $doc -FolderIcon "/Flat/Hardware/Screen Monitor" -InheritFromParent $true
-
-	# create SSH connection
-	$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalSSHConnection -Name "$($ipAddr) SSH"
-	$newConnection.Description = "vCenter SSH"
-	$newConnection.URI = $ipAddr
-	Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
-	# using CustomField for now, CustomProperties not yet supported in PS-API
-	$newConnection.CustomField1 = $target.UUID
-	$newConnection.CustomField2 = $target.ProductLine
-
-	# create VMware connection
-	$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalVMwareConnection -Name "$($ipAddr)"
-	$newConnection.Description = "vCenter Object"
-	$newConnection.URI = $ipAddr
-	Set-RoyalObjectValue -Object $newConnection -Property ManagementEndpointFromParent -Value $true | Out-Null
-	Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
-	# using CustomField for now, CustomProperties not yet supported in PS-API
-	$newConnection.CustomField1 = $target.UUID
-	$newConnection.CustomField2 = $target.ProductLine
-
-	# create WEB connection
-	$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name "$($ipAddr) Web"
-	$newConnection.Description = "vCenter Web"
-	$newConnection.URI = "https://" + $ipAddr + "/"
-	Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
-	# using CustomField for now, CustomProperties not yet supported in PS-API
-	$newConnection.CustomField1 = $target.UUID
-	$newConnection.CustomField2 = $target.ProductLine
-
-	# create VAMI WEB connection
-	$newConnection = New-RoyalObject -Folder $lastFolder -Type RoyalWebConnection -Name "$($ipAddr) VAMI Web"
-	$newConnection.Description = "vCenter VAMI Web"
-	$newConnection.URI = "https://" + $ipAddr + ":5480/"
-	Set-RoyalObjectValue -Object $newConnection -Property SecureGatewayFromParent -Value $true | Out-Null
-	# using CustomField for now, CustomProperties not yet supported in PS-API
-	$newConnection.CustomField1 = $target.UUID
-	$newConnection.CustomField2 = $target.ProductLine
-
-	$imported_vcenter++;
+} else {
+	Write-Output -Verbose "- Importing vCenters... Skipped."
 }
 
 # did we imported any vCenters?
@@ -503,15 +543,17 @@ Write-Output -Verbose "+ Finishing..."
 # ICON STUFF
 Write-Output -Verbose "Setting icons..."
 # giving connections folder some love
-$connectionsObject = Get-RoyalObject -Folder $doc -Name "Connections" -Type RoyalFolder
+$connectionsObject = CreateRoyalFolderHierarchy -FolderStructure "Connections/" -Folder $doc -FolderIcon "/Flat/Hardware/Computers" -InheritFromParent $true
 Set-RoyalObjectValue -Object $connectionsObject -Property CustomImageName -Value "/Flat/Software/Tree" | Out-Null
 
 # setting connections>datacenter icon
 # check if lastFolder is Datacenter folder-object (which means the lastFolder is directly below Connections folder)
 $vmsFolderObject = Get-RoyalObject -Folder $connectionsObject -Type RoyalFolder -Name "Virtual Machines"
-Get-RoyalObject -Folder $vmsFolderObject -Type RoyalFolder -Name "*" | ForEach-Object {
-	if ($_.ParentID -eq $vmsFolderObject.ID) {
-		Set-RoyalObjectValue -Object $_ -Property CustomImageName -Value "/Flat/Network/Cloud" | Out-Null
+if ($vmsFolderObject) {
+	Get-RoyalObject -Folder $vmsFolderObject -Type RoyalFolder -Name "*" | ForEach-Object {
+		if ($_.ParentID -eq $vmsFolderObject.ID) {
+			Set-RoyalObjectValue -Object $_ -Property CustomImageName -Value "/Flat/Network/Cloud" | Out-Null
+		}
 	}
 }
 
