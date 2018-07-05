@@ -2,7 +2,7 @@
 
 This script is automatically creating a [Royal TS](https://royalapplications.com/ts/win/features) document based on your VMware vSphere environment: It is importing virtual machines, hosts and the used vCenter, including the vCenter folder hierarchy, IP address, the guest operating system, annotations and more.
 
-Depending on the VMware vSphere environment the script execution may take some time, also the reverse DNS lookup may slow down the process a bit. If you would like to skip DNS Reverse Lookups for some reasons you can specify the optional parameter `-SkipDnsReverseLookup`. [Here](#parameters) you have an overview of all available parameters.
+**Notice:** Depending on the VMware vSphere environment the script execution may take some time, also the reverse DNS lookup may slow down the process a bit. If you would like to skip DNS Reverse Lookups for some reasons you can specify the optional parameter `-SkipDnsReverseLookup`. [Here](#parameters) you have an overview of all available parameters.
 
 ## SUPPORT
 
@@ -20,20 +20,22 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 - [ ] Being able to update existing documents instead of always creating new one
 - [x] ~~Support for multiple VMware vCenter connections, using same credentials~~ **Available starting v2.1.0**
 - [ ] Support for multiple VMware vCenter connections, using different credentials
+- [ ] Being able to exclude specific object types, e.g. VMs, Hosts and vCenter.
+- [ ] Add an option to be able automatically setting `Use Credentials from the parent folder` on each object
 
 ## REQUIREMENTS
 
-* Operating System: any Windows OS with PowerShell installed (PowerShell Core not supported)
-* PowerShell modules:
-  * PowerCLI (for retrieving vSphere data, [Installation guide](https://blogs.vmware.com/PowerCLI/2017/04/powercli-install-process-powershell-gallery.html))
-  * RoyalDocument (for interacting with Royal Documents, [Installation guide](https://content.royalapplications.com/Help/RoyalTS/V4/index.html?scripting_gettingstarted.htm))
-* Access to VMware ESXi or VMware vCenter to retrieve the data using PowerCLI
+- Operating System: any Windows OS with PowerShell installed (PowerShell Core not supported)
+- PowerShell modules:
+  - PowerCLI (for retrieving vSphere data, [Installation guide](https://blogs.vmware.com/PowerCLI/2017/04/powercli-install-process-powershell-gallery.html))
+  - RoyalDocument (for interacting with Royal Documents, [Installation guide](https://content.royalapplications.com/Help/RoyalTS/V4/index.html?scripting_gettingstarted.htm))
+- Access to VMware ESXi or VMware vCenter to retrieve the data using PowerCLI
 
 ## USAGE
 
-* Download the script. [See below.](#download)
-* Execute the script with the corrected [parameters](#parameters). See [examples](#examples) below.
-* Wait until the document is created, which will look like [this](#example-output).
+- Download the script. [See below.](#download)
+- Execute the script with the corrected [parameters](#parameters). See [examples](#examples) below.
+- Wait until the document is created, which will look like [this](#example-output).
 
 ### DOWNLOAD
 
@@ -45,13 +47,13 @@ C:\PS> wget -OutFile importVIEnvironmentIntoRTS.ps1 https://raw.githubuserconten
 
 ### PARAMETERS
 
-| Parameter                 | Type          | Description | Required | Default |
-| ------------------------- | ------------- | ----------- | -------- | ------- |
-| **VITarget**             | `String/Array` | The VITarget is the hostname/IP of either a standalone ESXi or vCenter to import the data from.<br /><br />Starting with v2.1.0 you can also specify multiple hosts. Current limitation is that the _same credentials are going to be used for each VITarget_. | True | *None* |
-| **FileName**             | `String`       | The filename of the document. This name is also used when CSV export is enabled. Specify it the *without* file extension! | False | *vmw_servers* |
-| **Credential**           | `PSCredential` | Specify a credential object for authentication. You can use `Get-Credential` cmdlet herefor. If not provided, `Connect-VIServer` of PowerCLI will try using the current user session. | False | *None* |
-| **DoCsvExport**          | `Switch`       | If parameter provided, the data will also be exported in the CSV format. This will create two seperated files: `<FileName>_vms.csv` and `<FileName>_hosts.csv`. | False | *False* |
-| **SkipDnsReverseLookup** | `Switch`       | If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense. | False | *False* |
+| Parameter                 | Type           | Description | Required   | Default |
+| ------------------------- | -------------- | ----------- | :--------: | ------- |
+| **VITarget**              | `String/Array` | The VITarget is the hostname/IP of either a standalone ESXi or vCenter to import the data from.<br/><br/>Starting with v2.1.0 you can also specify multiple hosts. Current limitation is that the _same credentials are going to be used for each VITarget_. | True | *None* |
+| **FileName**              | `String`       | The filename of the document. This name is also used when CSV export is enabled. Specify it the *without* file extension! | False | *vmw_servers* |
+| **Credential**            | `PSCredential` | Specify a credential object for authentication. You can use `Get-Credential` cmdlet herefor. If not provided, `Connect-VIServer` of PowerCLI will try using the current user session. | False | *None* |
+| **DoCsvExport**           | `Switch`       | If parameter provided, the data will also be exported in the CSV format. This will create two seperated files: `<FileName>_vms.csv` and `<FileName>_hosts.csv`. | False | *False* |
+| **SkipDnsReverseLookup**  | `Switch`       | If parameter provided, the DNS Reverse Lookup will be skipped. Only use when it makes sense. | False | *False* |
 
 ### EXAMPLES
 
@@ -82,7 +84,13 @@ C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "192.168.1.1" -FileName "serve
 
 ![RoyalTS Document Screenshot](https://raw.githubusercontent.com/patschi/royalts-scripts/master/screenshots/importVIEnvironmentIntoRTS-rtsdoc-1.png "Royal TS Document Screenshot")
 
-## RECOMMENDATION
+## RECOMMENDATIONS
+
+### Mass changes for imported objects
+
+You have imported a lot of objects and you just want to change just a few properties of all objects with ease? That's what the bulk-edit functionality is for. This allows you doing mass-changes of your previously imported objects of the same connection type with just a few clicks. How this works, you can read at this following knowledge base article over here: [Bulk-Edit and the Folder Dashboard (Win)](https://www.royalapplications.com/go/kb-ts-win-bulkedit)
+
+### Web Page Default Plugin
 
 On new Royal TS installations by default the *Internet Explorer engine* will be used for created Web Page connections. As the VMware vCenter Web Client nor the HTML5 Client are probably not working fine with Internet Explorer, I strongly recommend using *embedded Chromium engine* as the default Web Page plugin. Therefor please follow these steps:
 
