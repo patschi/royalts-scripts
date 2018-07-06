@@ -25,6 +25,8 @@
   If parameter provided, all hosts will be excluded and not imported in the Royal document. By default everything will be imported.
 .PARAMETER ExcludeVMs
   If parameter provided, all virtual machines will be excluded and not imported in the Royal document. By default everything will be imported.
+.PARAMETER UseCredentialsFromParent
+  If parameter provided all created objects will inherit the credentials from the parent object. Making it easy to centrally managing/setting a credential object for all objects.
 .EXAMPLE
   C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "vcenter.domain.local" -DoCsvExport
 .EXAMPLE
@@ -37,7 +39,7 @@
   C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "esxi01.domain.local" -ExcludeVMs
 .NOTES
   Name:           importVIEnvironmentIntoRTS
-  Version:        2.2.5
+  Version:        2.3.0
   Author:         Patrik Kernstock (pkern.at)
   Copyright:      (C) 2017-2018 Patrik Kernstock
   Creation Date:  October 10, 2017
@@ -91,7 +93,11 @@ param(
 
 	# Decide if we exclude VMs
 	[Parameter(Mandatory=$false)]
-	[Switch] $ExcludeVMs
+	[Switch] $ExcludeVMs,
+
+	# Decide if we exclude VMs
+	[Parameter(Mandatory=$false)]
+	[Switch] $UseCredentialsFromParent
 )
 
 ### OTHERS
@@ -182,6 +188,12 @@ function CreateRoyalFolderHierarchy()
 			if ($inheritFromParent -eq $true) {
 				Set-RoyalObjectValue -Object $newFolder -Property ManagementEndpointFromParent -Value $true | Out-Null
 				Set-RoyalObjectValue -Object $newFolder -Property SecureGatewayFromParent -Value $true | Out-Null
+			}
+			# check if we want to inherit credentials from parent...
+			if ($UseCredentialsFromParent) {
+				# here CredentialFromParent is by default $false, so no need to force-set it here. This is the recommended way setting this option.
+				Set-RoyalObjectValue -Object $newFolder -Property CredentialMode -Value 1 | Out-Null
+				Set-RoyalObjectValue -Object $newFolder -Property CredentialFromParent -Value $true | Out-Null
 			}
 			$currentFolder = $newFolder
 		}
