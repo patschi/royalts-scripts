@@ -37,7 +37,7 @@
   C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "esxi01.domain.local" -ExcludeVMs
 .NOTES
   Name:           importVIEnvironmentIntoRTS
-  Version:        2.2.0
+  Version:        2.2.5
   Author:         Patrik Kernstock (pkern.at)
   Copyright:      (C) 2017-2018 Patrik Kernstock
   Creation Date:  October 10, 2017
@@ -81,15 +81,15 @@ param(
 	[Parameter(Mandatory=$false)]
 	[Switch] $SkipDnsReverseLookup,
 
-	# Decide if we ignore vCenters
+	# Decide if we exclude vCenters
 	[Parameter(Mandatory=$false)]
 	[Switch] $ExcludeVCenters,
 
-	# Decide if we ignore Hosts
+	# Decide if we exclude Hosts
 	[Parameter(Mandatory=$false)]
 	[Switch] $ExcludeHosts,
 
-	# Decide if we ignore VMs
+	# Decide if we exclude VMs
 	[Parameter(Mandatory=$false)]
 	[Switch] $ExcludeVMs
 )
@@ -270,7 +270,18 @@ if ($connectServer) {
 			@{N="UUID"; E={$_.Summary.Hardware.Uuid}},`
 			@{N="Name"; E={$_.Name}},`
 			@{N="IpAddress"; E={($_.Config.Network.Vnic | Where-Object {$_.Device -eq "vmk0"}).Spec.Ip.IpAddress}},`
-			@{N="Type"; E={$_.Hardware.SystemInfo.Vendor + " " + $_.Hardware.SystemInfo.Model}}
+			@{N="Type"; E={$_.Hardware.SystemInfo.Vendor + " " + $_.Hardware.SystemInfo.Model}},`
+			@{N="Cluster"; E={
+				# get parent...
+				$parent = Get-View -Id $_.Parent -Property Name, Parent
+				# check if parent is cluster. If not, it's probably a host folder. So we search one step further.
+				while($parent -isnot [VMware.Vim.ClusterComputeResource]) {
+					# next try... is it now a cluster?
+					$parent = Get-View -Id $parent.Parent -Property Name, Parent
+				}
+				# finally return the name of the cluster. we got it.
+				$parent.Name
+			}}
 	}
 
 	# RETRIEVE CONNECTED VITARGETS
@@ -402,8 +413,12 @@ if ($hosts.Length -gt 0) {
 
 		Write-Output -Verbose "Importing $($hostObj.Name)..."
 
+		$hostFolderName = $hostObj.Name
+		if ($hostObj.Cluster) {
+			$hostFolderName = $hostObj.Cluster + "/" + $hostObj.Name
+		}
 		# create folder recursively
-		$lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/Hosts/" + $hostObj.Name) -Folder $doc -FolderIcon "/Flat/Hardware/Server" -InheritFromParent $true
+		$lastFolder = CreateRoyalFolderHierarchy -FolderStructure ("Connections/Hosts/" + $hostFolderName) -Folder $doc -FolderIcon "/Flat/Hardware/Server" -InheritFromParent $true
 
 		# check if we want to use rDNS
 		if ($useDNSReverseLookup) {

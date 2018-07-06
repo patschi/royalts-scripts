@@ -14,7 +14,7 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 
 ## TODO
 
-**Current version**: 2.2.0
+**Current version**: 2.2.5
 
 - [x] ~~Rewrite script to use parameters instead of hardcoded values within script file~~ **Done in v2.0.0**
 - [ ] Being able to update existing documents instead of always creating new one
@@ -22,6 +22,7 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 - [ ] Support for multiple VMware vCenter connections, using different credentials
 - [x] ~~Being able to exclude specific object types, e.g. VMs, Hosts and vCenter.~~ **Available starting v2.2.0**
 - [ ] Add an option to be able automatically setting `Use Credentials from the parent folder` on each object
+- [x] ~~Import hosts to document and separate them by clusters (if applicable. e.g. Hosts/Cluster1/Host1)~~ **Available starting v2.2.5**
 
 ## REQUIREMENTS
 
