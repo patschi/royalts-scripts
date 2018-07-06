@@ -81,7 +81,7 @@ C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "192.168.2.1" -FileName "serve
 [...processing...]
 
 C:\PS> $cred = Get-Credential
-C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "192.168.1.1" -FileName "servers_IPonly" -Credential $cred -SkipDnsReverseLookup
+C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "192.168.1.1" -FileName "servers_IPonly" -Credential $cred -SkipDnsReverseLookup -UseCredentialsFromParent
 [...processing...]
 
 C:\PS> .\importVIEnvironmentIntoRTS.ps1 -VITarget "vcenter.domain.local" -ExcludeVCenters -ExcludeHosts
