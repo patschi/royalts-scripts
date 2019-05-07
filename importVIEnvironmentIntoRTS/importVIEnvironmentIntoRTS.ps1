@@ -39,11 +39,11 @@
   C:\PS> .\importVIEnvironmentIntoRTS.ps1 -FileName "servers" -VITarget "esxi01.domain.local" -ExcludeVMs
 .NOTES
   Name:           importVIEnvironmentIntoRTS
-  Version:        2.3.0
+  Version:        2.5.0
   Author:         Patrik Kernstock (pkern.at)
   Copyright:      (C) 2017-2018 Patrik Kernstock
   Creation Date:  October 10, 2017
-  Modified Date:  July 6, 2018
+  Modified Date:  May 7, 2019
   Changelog:      For exact script changelog please check out the git commits history at:
 				  https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/importVIEnvironmentIntoRTS.ps1
   Disclaimer:     No guarantee for anything.
@@ -100,11 +100,6 @@ param(
 	[Switch] $UseCredentialsFromParent
 )
 
-### OTHERS
-## CHANGE IF REQUIRED
-# Path to the PowerShell module within the Royal TS installation directory (if it was installed elsewhere)
-$RoyalPowerShellModule = Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath 'code4ward.net\Royal TS V4\RoyalDocument.PowerShell.dll'
-
 ####################################
 ### ** THE MAGIC STARTS HERE! ** ###
 ####################################
@@ -129,24 +124,45 @@ if ($DoCsvExport) {
 # flag if connect to vCenter or ESXi, for debugging purposes (e.g. PS ISE testing)
 $connectServer = $true
 
-# load modules: VMware and Royal TS.
-Import-Module -Name VMware.VimAutomation.Core
-Import-Module $RoyalPowerShellModule
+# LOAD MODULES
+# load module: Royal TS.
+if (Get-Module -ListAvailable RoyalDocument.PowerShell) {
+	# Check if module is available, if so, load it. This is when module got installed through PSGallery.
+	Import-Module RoyalDocument.PowerShell
 
-# module loaded checks
-if (!(Get-Module "VMware.VimAutomation.Core")) {
-	Write-Output "VMware module not loaded. See more information at:"
-	Write-Output "https://blogs.vmware.com/PowerCLI/2017/04/powercli-install-process-powershell-gallery.html"
-	Write-Output "Aborting."
-	exit
+} else {
+	# If not, we try the legacy way.
+	$psModulePaths = @()
+	$psModulePaths += Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath 'Royal TS V5\RoyalDocument.PowerShell.dll'
+	$psModulePaths += Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath 'code4ward.net\Royal TS V4\RoyalDocument.PowerShell.dll'
+	foreach ($psModulePath in $psModulePaths) {
+		if (Test-Path $psModulePath) {
+			Import-Module $psModulePath
+			break
+		}
+	}
 }
 
 if (!(Get-Module "RoyalDocument.PowerShell")) {
-	Write-Output "RoyalDocument module not loaded."
-	Write-Output "Be sure Royal TS is installed and check if RoyalPowerShellModule is set."
+	Write-Output "Required RoyalDocument module not loaded. Please make sure you have either the PowerShell module"
+	Write-Output "installed through PSGallery (recommended), or have an older Royal TS release installed which still"
+	Write-Output "ships the PowerShell module with the installer. See more info at PSGallery site at:"
+	Write-Output "https://www.powershellgallery.com/packages/RoyalDocument.PowerShell/"
+	Write-Output "Installation using PSGallery: $ Install-Module -Name RoyalDocument.PowerShell"
 	Write-Output "Aborting."
 	exit
 }
+
+# load module: VMware PowerCLI.
+if (!(Get-Module -ListAvailable "VMware.VimAutomation.Core")) {
+	Write-Output "Required VMware module not installed. See installation instruction at:"
+	Write-Output "https://blogs.vmware.com/PowerCLI/2017/04/powercli-install-process-powershell-gallery.html"
+	Write-Output "Installation using PSGallery: $ Install-Module -Name VMware.PowerCLI"
+	Write-Output "Aborting."
+	exit
+}
+
+Import-Module -Name VMware.VimAutomation.Core
 
 # sanity checks
 if (Test-Path $RoyalDocFileName) {
@@ -349,13 +365,13 @@ if ($vms.Length -gt 0) {
 
 		# skip servers which are not powered on, as we can not retrieve the IP address of the guest due to no running VMware tools
 		if ($server.powerState -ne "poweredOn") {
-			Write-Output -Verbose "Ignoring $($server.Name) as the machine is not powered on and therefor can not retrieve IP address..."
+			Write-Warning "Ignoring $($server.Name) as the machine is not powered on and IP address cannot be retrieved..."
 			continue
 		}
 
 		# creating connection without IpAddress does not make that much sense. So we are checking it here.
 		if (!$server.IpAddress) {
-			Write-Output -Verbose "Ignoring $($server.Name) due to empty IP address..."
+			Write-Warning "Ignoring $($server.Name) due to empty IP address..."
 			continue
 		}
 

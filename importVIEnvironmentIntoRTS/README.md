@@ -14,7 +14,7 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 
 ## TODO
 
-**Current version**: 2.3.0
+**Current version**: 2.5.0
 
 - [x] ~~Rewrite script to use parameters instead of hardcoded values within script file~~ **Done in v2.0.0**
 - [ ] Being able to update existing documents instead of always creating new one
@@ -26,10 +26,10 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 
 ## REQUIREMENTS
 
-- Operating System: any Windows OS with PowerShell installed (PowerShell Core not supported)
+- Operating System: Windows PowerShell, or supported distribution of PowerShell Core
 - PowerShell modules:
-  - PowerCLI (for retrieving vSphere data, [Installation guide](https://blogs.vmware.com/PowerCLI/2017/04/powercli-install-process-powershell-gallery.html))
-  - RoyalDocument (for interacting with Royal Documents, [Installation guide](https://content.royalapplications.com/Help/RoyalTS/V4/index.html?scripting_gettingstarted.htm))
+  - VMware.PowerCLI (for retrieving vSphere data, [Installation guide](https://blogs.vmware.com/PowerCLI/2017/04/powercli-install-process-powershell-gallery.html))
+  - RoyalDocument.PowerShell (for interacting with Royal Documents, [Installation guide](https://content.royalapplications.com/Help/RoyalTS/V4/index.html?scripting_gettingstarted.htm))
 - Access to VMware ESXi or VMware vCenter to retrieve the data using PowerCLI
 
 ## USAGE
@@ -103,7 +103,7 @@ You have imported a lot of objects and you just want to change just a few proper
 
 ### Web Page Default Plugin
 
-On new Royal TS installations by default the *Internet Explorer engine* will be used for created Web Page connections. As the VMware vCenter Web Client nor the HTML5 Client are probably not working fine with Internet Explorer, I strongly recommend using *embedded Chromium engine* as the default Web Page plugin. Therefor please follow these steps:
+On new Royal TS installations by default the *Internet Explorer engine* will be used for created Web Page connections. As the VMware vCenter Web Client nor the HTML5 Client are probably not working fine with Internet Explorer, I strongly recommend using *embedded Chromium engine* as the default Web Page plugin. Therefore please follow these steps:
 
 1. Open the Royal TS application on your computer.
 2. Click on `File` in the top-left side, and then on `Plugins` in the left menu. ([Official plugins docs.](https://content.royalapplications.com/Help/RoyalTS/V4/index.html?introduction_plugins.htm))
