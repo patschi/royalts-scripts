@@ -40,8 +40,8 @@
 .NOTES
   Name:           importVIEnvironmentIntoRTS
   Version:        2.5.0
-  Author:         Patrik Kernstock (pkern.at)
-  Copyright:      (C) 2017-2018 Patrik Kernstock
+  Author:         Patrik Kernstock (patrik.kernstock.net)
+  Copyright:      (C) 2017-2019 Patrik Kernstock
   Creation Date:  October 10, 2017
   Modified Date:  May 7, 2019
   Changelog:      For exact script changelog please check out the git commits history at:

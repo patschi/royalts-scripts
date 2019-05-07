@@ -30,7 +30,7 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 - PowerShell modules:
   - VMware.PowerCLI (for retrieving vSphere data, [Installation guide](https://blogs.vmware.com/PowerCLI/2017/04/powercli-install-process-powershell-gallery.html))
   - RoyalDocument.PowerShell (for interacting with Royal Documents, [Installation guide](https://content.royalapplications.com/Help/RoyalTS/V4/index.html?scripting_gettingstarted.htm))
-- Access to VMware ESXi or VMware vCenter to retrieve the data using PowerCLI
+- Access to VMware ESXi or VMware vCenter to retrieve the data using VMware PowerCLI
 
 ## USAGE
 
@@ -40,7 +40,7 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 
 ### DOWNLOAD
 
-Some recent PowerShell versions have a cool `wget` alias to the cmldlet `Invoke-WebRequest` allowing you to easily download files. This way you can use it to quickly download the script like here:
+Newer PowerShell versions have a handy `wget` alias to the cmldlet `Invoke-WebRequest` allowing you to easily download files. This way you can use it to quickly download the script like here:
 
 ```powershell
 C:\PS> wget -OutFile importVIEnvironmentIntoRTS.ps1 https://raw.githubusercontent.com/patschi/royalts-scripts/master/importVIEnvironmentIntoRTS/importVIEnvironmentIntoRTS.ps1
