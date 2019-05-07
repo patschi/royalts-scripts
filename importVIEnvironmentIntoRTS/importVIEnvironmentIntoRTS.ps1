@@ -45,11 +45,11 @@
   Creation Date:  October 10, 2017
   Modified Date:  May 7, 2019
   Changelog:      For exact script changelog please check out the git commits history at:
-				  https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/importVIEnvironmentIntoRTS.ps1
+                  https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/importVIEnvironmentIntoRTS.ps1
   Disclaimer:     No guarantee for anything.
-				  No kittens were harmed during the development.
+                  No kittens were harmed during the development.
   Support:        For support please check out the "Support" section in the README file here:
-				  https://github.com/patschi/royalts-scripts/tree/master/importVIEnvironmentIntoRTS#support
+                  https://github.com/patschi/royalts-scripts/tree/master/importVIEnvironmentIntoRTS#support
 .LINK
   https://github.com/patschi/royalts-scripts/commits/master/importVIEnvironmentIntoRTS/
 #>
