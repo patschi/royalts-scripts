@@ -29,7 +29,7 @@ Feel free to adjust the scripts to your personal or corporates needs, however it
 - Operating System: Windows PowerShell, or supported distribution of PowerShell Core
 - PowerShell modules:
   - VMware.PowerCLI (for retrieving vSphere data, [Installation guide](https://blogs.vmware.com/PowerCLI/2017/04/powercli-install-process-powershell-gallery.html))
-  - RoyalDocument.PowerShell (for interacting with Royal Documents, [Installation guide](https://content.royalapplications.com/Help/RoyalTS/V4/index.html?scripting_gettingstarted.htm))
+  - RoyalDocument.PowerShell (for interacting with Royal Documents, [PSGallery](https://www.powershellgallery.com/packages/RoyalDocument.PowerShell/), [Documentation](https://content.royalapplications.com/Help/RoyalTS/V5/index.html?scripting_gettingstarted.htm))
 - Access to VMware ESXi or VMware vCenter to retrieve the data using VMware PowerCLI
 
 ## USAGE
